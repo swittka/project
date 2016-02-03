@@ -6,11 +6,8 @@
 % Grafiken aus PNG Dateien einbinden
 \usepackage{graphicx}
 
-% Deutsche Sonderzeichen benutzen 
-\usepackage{ngerman}
-
 % deutsche Silbentrennung
-\usepackage[ngerman]{babel}
+%\usepackage[ngerman]{babel}
 
 % Eurozeichen einbinden
 \usepackage[right]{eurosym}
@@ -119,9 +116,9 @@
 % \renewcommand{\nomlabel}[1]{#1 \dotfill}
 % \setlength{\nomitemsep}{-\parsep}
 
-% Disable single lines at the start of a paragraph (Schusterjungen)
+% Disable single lines at the start of a paragraph
 \clubpenalty = 10000
-% Disable single lines at the end of a paragraph (Hurenkinder)
+% Disable single lines at the end of a paragraph
 \widowpenalty = 10000
 \displaywidowpenalty = 10000
 
@@ -147,13 +144,17 @@
 \onehalfspacing
 
 % Sperrvermerk
-\input{sperrvermerk}
+%\input{sperrvermerk}
 
 % Einleitung / Abstract
 \include{abstract}
 
 % einfacher Zeilenabstand
 \singlespacing
+
+% Eidesstattliche Erklärung
+\addcontentsline{toc}{section}{Declaration of Authorship}
+\include{erklaerung}
 
 % Inhaltsverzeichnis anzeigen
 \newpage
@@ -222,9 +223,9 @@
 \onehalfspacing
 
 % einzelne Kapitel
-\input{1_einleitung}
+\input{1_introduction}
 
-\input{2_kap1}
+\input{2_uvm}
 
 \input{3_kap2}
 
@@ -260,10 +261,6 @@
 \addcontentsline{toc}{section}{Anhang}
 \fancyhead[L]{Anhang} %Kopfzeile links
 \input{anhang/anhang}
-
-% Eidesstattliche Erklärung
-\addcontentsline{toc}{section}{Eidesstattliche Erklärung}
-\include{erklaerung}
 
 % leere Abschlussseite
 \newpage

@@ -1,0 +1,11 @@
+.metadata/
+*.idx
+*.lol
+*.nlo
+*.nls
+RemoteSystemsTempFiles/
+*.pdf
+*.gz
+Project/tmp/
+Project/RemoteSystemsTempFiles/
+*~
