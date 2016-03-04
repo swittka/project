@@ -6,6 +6,10 @@
 % Grafiken aus PNG Dateien einbinden
 \usepackage{graphicx}
 
+% figure refs with section number
+\usepackage{chngcntr}
+\counterwithin{figure}{section}
+
 % deutsche Silbentrennung
 %\usepackage[ngerman]{babel}
 
@@ -130,9 +134,9 @@
 %\changefont{phv}{m}{n}
 
 % Leere Seite am Anfang
-\newpage
-\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
-\section*{ }
+%\newpage
+%\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
+%\section*{ }
 
 % Titelseite %
 \include{latex_einstellungen/deckblatt}
@@ -223,19 +227,17 @@
 \onehalfspacing
 
 % einzelne Kapitel
-\input{1_introduction}
+\include{1_introduction}
 
-\input{2_uvm}
+\include{2_uvm}
 
-\input{3_uvm_ml}
+\include{3_uvm_ml}
 
-%....
+\include{4_conclusion}
 
-\input{4_conclusion}
+\include{5_future_work}
 
-\input{5_future_work}
-
-\input{beispiel}
+\include{beispiel}
 
 \onecolumn
 % einfacher Zeilenabstand

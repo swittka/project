@@ -1,14 +1,84 @@
-\section{Summary of the Universal Verification Methodology}\label{uvm}
-- ca. 3 pages
-\\
-- 1/2 page\\
--what is UVM?\\
--why should you use UVM?\\
--different types of UVCs (interface, module)\\
-\subsection{Interface UVC} (1 page)\\
-- environment, slave/master agent, bfm, sequence driver, sequences, monitor\\
-- active/passive\\
-\subsection{Module UVC} (1 page)\\
-- environment, monitor, scoreboard, reference model\\
-\subsection{Data Communication between Components} (1/2 page)\\
-- TLM-Ports\\
+\section{Overview of the Universal Verification Methodology}\label{uvm}
+
+The \emph{Universal Verification Methodology (UVM)} is used to verify
+\emph{integrated circuit (IC)} designs and is standardized by Accellera,
+an independent standards organization. One of the key principles is to create
+reusable verification environments and thereby enabling efficient development.
+This is accomplished by using \emph{Universal Verification Components (UVCs)}.
+
+\subsection{Universal Verification Components}\label{uvc}
+
+A UVM testbench is composed of reusable and configurable UVCs, each
+containing all functionalities to verify a single interface or module. The
+structure of these components inside a UVM testbench is shown in figure
+\ref{fig:UVM_testbench}.
+
+\begin{figure}[htb]
+ \centering
+ \includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_testbench}
+ \caption{Structure of an UVM testbench}
+\label{fig:UVM_testbench}
+\end{figure}
+
+\subsubsection{Interface UVC}\label{interface_uvc}
+
+For each interface of an \emph{device under test (DUT)} an interface UVC needs
+to be created. Its standard architecture contains the following elements:
+
+\begin{itemize}
+  \item \textbf{Data item}\\
+  Data items represent stimulus for an interface of the
+  DUT or can be extracted from it for observation.
+  The attributes of a data item are derived from the signals of the interface of the
+  DUT to create an object in a higher level of abstraction.
+  \item \textbf{Sequencer/Sequence Driver}\\
+  The sequencer in \emph{UVM-Systemverilog (UVM-SV)} respectively the sequence
+  driver in \emph{UVM-e} is a stimulus generator, which creates random
+  stimulus by executing sequences. These sequences either generate one or more
+  data items or other sequences.
+  \item \textbf{Driver/Bus Functional Model (BFM)}\\
+  The driver in \emph{UVM-SV} respectively BFM in \emph{UVM-e} receives a data
+  item from a sequencer or sequence driver. Then the extracted attributes are
+  used to drive the signals of the DUT. So the active functionalities of an
+  interface UVC are split between the transaction-level sequencer or sequence
+  driver and the signal-level driver or BFM.
+  \item \textbf{Monitor}\\
+  The monitor basically inverts the functionality of a driver or BFM. It samples
+  the signal of the DUT and generates data items. Additionally it collects coverage
+  and performs checking. The monitor is a passive entity and does not drive any
+  signals of the DUT.
+  \item \textbf{Collector} (optional)\\
+  Just like dividing stimuli generation into transaction-level and signal-level
+  the same can be done for sampling. Thereby the monitor furthermore collects
+  coverage and performs checking, but the signal-level functionality is
+  transferred into another unit called collector. This partitioning is optional
+  and not mandatory for UVM.
+  \item \textbf{Agent}\\
+  Agents encapsulate sequencers/sequence drivers, drivers/BFMs and monitors to
+  ensure reusability. They can either be active and drive the signals of the DUT
+  or passive and monitor the DUT's interface while other DUTs drive the signals.
+  UVCs can contain more than one agent, for example master or slave agents.
+  \item \textbf{Environment}\\
+  The environment is the top-level entity of the UVC. It contains all agents as
+  well as configuration properties, which are used to customize the UVC and
+  therefore make it reusable.
+\end{itemize}
+
+\subsubsection{Module UVC}\label{module_uvc}
+
+Because an interface UVC can only capture information of a single interface,
+module UVCs are necessary to verify data across multiple interfaces. It is
+connected to the interface UVCs via \emph{Transaction-Level Modeling (TLM)
+ports} (see section \ref{tlm}). The received data are then processed in a
+scoreboard or reference model to check the behavior over multipe interfaces.
+Since it is a passive element, it can be reused in system-level verification.
+
+\subsection{Data Communication between Components (TLM)}\label{tlm}
+
+To communicate between UVCs TLM ports are used, which improve reusability. With
+them transactions are exchanged without explicit type conventions via a
+function, that is bind to the TLM port. After the function is called the
+transaction is converted into a bitstream (packing) and then reconverted into a
+transaction at the destination (unpacking). It is even possible to communicate
+between different verification languages, if they include the definition of TLM
+ports, for example \emph{Systemverilog}, \emph{SystemC} and \emph{e}.
