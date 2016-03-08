@@ -7,13 +7,26 @@
 - what do i need to change in the code\\
 - code example\\
 \\
-\subsection{Integrate Multi-Language functionality into Incisive Enterprise
+\subsection{Integrate Multi-Language Functionality into Incisive Enterprise
 Simulator}
 - where to get UVM-ML\\
 - how to install\\
 - problems with installation\\
 \\
 \subsection{Creating a Multi-Language Environment}
+When planing to create a multi-language environment, there are two possible
+approaches supported by UVM-ML to achive this goal. Firstly an \emph{unified
+hierachy} can be created or alternatively an \emph{side-by-side} environment. In an unified
+hierachy a child component implemented in one verification language is
+instantiated from a parent component in another verification language. In
+contrast, when creating a side-by-side architecture, the environment contains
+multiple tops.
+
+\subsubsection{Instantiating a SystemVerilog Component within an e Unit}
+
+\subsubsection{Instantiating an e Unit Within a SustemVerilog Component}
+
+\subsubsection{Creating a Side-by-Side Environment}
 - instantiate e UVC in sv environment\\
 - instantiate sv UVC in e environment\\
 - side-by-side \\
@@ -22,7 +35,7 @@ Simulator}
 \subsection{Configuring a Multi-Language Environment}
 - distribute config across the subcomponents\\
 \\
-\subsection{Data Communication in a Multi-Language Environment}
+\subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
 - tlm-port e -> sv\\
 - tlm-port sv -> e\\
 - type mapping\\
