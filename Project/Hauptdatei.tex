@@ -55,7 +55,8 @@
 %\pagestyle{headings}
 
 % erzeugt Inhaltsverzeichnis mit Querverweisen zu den Kapiteln (PDF Version)
-\usepackage[bookmarksnumbered,pdftitle={\titleDocument},hyperfootnotes=false]{hyperref} 
+\usepackage[bookmarksnumbered,pdftitle={\titleDocument},hyperfootnotes=false,hidelinks]{hyperref}
+%\usepackage[bookmarksnumbered,pdftitle={\titleDocument},hyperfootnotes=false]{hyperref}
 %\hypersetup{colorlinks, citecolor=red, linkcolor=blue, urlcolor=black}
 %\hypersetup{colorlinks, citecolor=black, linkcolor= black, urlcolor=black}
 
@@ -93,8 +94,19 @@
 
 % für Listings
 \usepackage{listings}
-\lstset{numbers=left, numberstyle=\tiny, numbersep=5pt, keywordstyle=\color{black}\bfseries, stringstyle=\ttfamily,showstringspaces=false,basicstyle=\footnotesize,captionpos=b}
-\lstset{language=java}
+\lstset{
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=5pt,
+  keywordstyle=\color{black}\bfseries,
+  stringstyle=\sffamily,
+  showstringspaces=false,
+  basicstyle=\ttfamily\lst@ifdisplaystyle\footnotesize\else\normalsize\fi,
+  captionpos=b}
+
+\AtBeginDocument{
+\counterwithin{lstlisting}{section}
+}
 
 % Indexerstellung
 \makeindex
@@ -126,9 +138,23 @@
 \widowpenalty = 10000
 \displaywidowpenalty = 10000
 
+% create additional subsection layer
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}
+	{-2.5ex\@plus -1ex \@minus -.25ex}
+	{1.25ex \@plus .25ex}
+	{\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4}
+%\setcounter{tocdepth}{4}
+
 \begin{document}
 % hier werden die Trennvorschläge inkludiert
 \input{latex_einstellungen/trennung}
+
+%syntax highlighting for additional languages
+\input{latex_einstellungen/systemverilog_code}
+\input{latex_einstellungen/e_code}
 
 %Schriftart Helvetica
 %\changefont{phv}{m}{n}
@@ -237,7 +263,7 @@
 
 \include{5_future_work}
 
-\include{beispiel}
+%\include{beispiel}
 
 \onecolumn
 % einfacher Zeilenabstand
@@ -259,14 +285,14 @@
 
 \onehalfspacing
 % evtl. Anhang
-\newpage
-\addcontentsline{toc}{section}{Anhang}
-\fancyhead[L]{Anhang} %Kopfzeile links
-\input{anhang/anhang}
+%\newpage
+%\addcontentsline{toc}{section}{Anhang}
+%\fancyhead[L]{Anhang} %Kopfzeile links
+%\input{anhang/anhang}
 
 % leere Abschlussseite
-\newpage
-\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
-\section*{ }
+%\newpage
+%\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
+%\section*{ }
 
 \end{document}

@@ -1,0 +1,27 @@
+\lstdefinelanguage{e}
+{
+  sensitive = true,
+  morekeywords = [1]{
+    %% e keywords
+    also,
+    instance,
+    is,
+    keep,
+    like,
+    only,
+    unit
+  },
+  morekeywords = [2]{
+    %% Frequently used predefined types
+    uint,
+    int
+  }, 
+  morekeywords = [3]{
+    %% Frequently used expressions
+    connect_pointers,
+    connect_ports
+  },
+  morecomment = [l]{//},
+  morestring = [b]"
+  %morestring = [b]'
+}

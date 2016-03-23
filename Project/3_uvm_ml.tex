@@ -1,12 +1,13 @@
 \section{Universal Verification Methodology Multi-Language}\label{uvm_ml}
-- why use UVM-ML?\\
-- benefits of UVM-ML\\
-\\
-- structure for each subsection:\\
-- how does it work\\
-- what do i need to change in the code\\
-- code example\\
-\\
+
+\begin{figure}[htb]
+ \centering
+ %\includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_ML_unified}
+ \includegraphics[scale=0.3]{abb/UVM_ML_architecture}
+ \caption{UVM-ML architecture}
+\label{fig:UVM_ML_architecture}
+\end{figure}
+
 \subsection{Integrate Multi-Language Functionality into Incisive Enterprise
 Simulator}
 - where to get UVM-ML\\
@@ -14,25 +15,150 @@ Simulator}
 - problems with installation\\
 \\
 \subsection{Creating a Multi-Language Environment}
-When planing to create a multi-language environment, there are two possible
-approaches supported by UVM-ML to achive this goal. Firstly an \emph{unified
-hierachy} can be created or alternatively an \emph{side-by-side} environment. In an unified
-hierachy a child component implemented in one verification language is
-instantiated from a parent component in another verification language. In
-contrast, when creating a side-by-side architecture, the environment contains
-multiple tops.
+A verification environment typically consists of a system UVC containing
+multiple subsystem UVCs, interface UVCs or module UVCs. These are composed in a
+hierarchical way. With UVM-ML an environment can be constructed with components,
+which are implemented in different frameworks. For example it could be composed
+of an interface UVC implemented in UVM-SV and a module UVC in
+UVM-\textit{e}. \\
+When planing to create such a multi-language environment, there
+are two possible approaches supported by UVM-ML to achieve this goal. Firstly an
+\emph{unified hierarchy} can be created or alternatively an \emph{side-by-side}
+environment. In an unified hierarchy a child component implemented in one
+verification language is instantiated from a parent component in another
+verification language. In contrast, when creating a side-by-side architecture,
+the environment contains multiple tops.
 
-\subsubsection{Instantiating a SystemVerilog Component within an e Unit}
+\subsubsection{Creating an \emph{Unified Hierarchy} Environment}
+To implement an \emph{unified hierarchy} each component which instantiates a
+component of another framework needs to create and connect a proxy to
+this component (this can be seen in figure~\ref{fig:UVM_ML_unified}). Then the
+backplane applies operations which are performed on the proxy to the
+corresponding component in the other verification language. This gives the
+opportunity to use some of UVM-ML's benefits. It is possible to use a predefined
+phasing in this environment. Where phases like build, connect or run are
+performed depth-first to ensure that dependencies between the components of
+different frameworks are resolved in the right way. Also sub components can be
+configured which increases the reusability of the environment, because when the
+environment is included in some other environment, only the top component needs
+to be configured and all sub components are configured automatically. Because of
+this it is recommended to implement such an environment.\\
+Following it is described how to create a \emph{unified hierachy} which
+instantiates a SystemVerilog component within an \textit{e} unit and vice versa.
 
-\subsubsection{Instantiating an e Unit Within a SustemVerilog Component}
+\begin{figure}[htb]
+ \centering
+ %\includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_ML_unified}
+ \includegraphics[scale=0.3]{abb/UVM_ML_unified}
+ \caption{Structure of an \emph{unified hierarchy} environment}
+\label{fig:UVM_ML_unified}
+\end{figure}
 
-\subsubsection{Creating a Side-by-Side Environment}
-- instantiate e UVC in sv environment\\
-- instantiate sv UVC in e environment\\
-- side-by-side \\
-- ??? already rate the different types (pros/cons) or in conclusion?\\
-\\
-\subsection{Configuring a Multi-Language Environment}
+\paragraph{Instantiating a SystemVerilog Component within an \textit{e} Unit}
+\label{sv_inside_e}
+When instantiating a SystemVerilog component within an \textit{e} unit,
+it is necessary to instantiate a proxy unit inside the \textit{e} unit. After that the
+proxy unit and the SystemVerilog component need to be connected. \\
+An example for the code of the extended SystemVerilog component can be seen in
+listing~\ref{lst:SV_unified_sub}).
+It is recommended to extend the SystemVerilog component
+(line~\ref{line_extend_component}) which will
+be reused and then put all multi-language functionalities inside this new
+component to ensure that the original component can still be used in
+non-multi-language environments. The extended one needs to include the UVM
+package (line~\ref{line_uvm_package}/\ref{line_uvm_macros}) as well as the adapter
+package for SystemVerilog (line~\ref{line_uvm_ml_package}).
+After that all additional multi-language functionalities can be put inside the
+class like configuring this sub component (see section~\ref{ml_config}) or data
+communication via TLM ports (see section~\ref{ml_tlm}).
+
+\lstset{language={SystemVerilog}, escapechar=|}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog code example: extended
+component}, label={lst:SV_unified_sub}]
+import uvm_pkg::*;					|\label{line_uvm_package}|
+`include "uvm_macros.svh"			|\label{line_uvm_macros}|
+import uvm_ml::*;					|\label{line_uvm_ml_package}|
+
+class ml_ubus_env extends ubus_env;			|\label{line_extend_component}|
+  `uvm_component_utils(ml_ubus_env)
+  function void build_phase(uvm_phase phase);
+    // Additional multi-language functionalities
+  endfunction : build_phase
+endclass : ml_ubus_env
+\end{lstlisting}
+
+Corresponding to the extensions in the SystemVerilog component the \textit{e}
+unit needs to include an proxy unit for it(see listing~\ref{lst:e_unified_top}).
+This can be done by instantiating an unit of type
+\lstinline$child_component_proxy$ (line~\ref{line_uvm_ml_e_proxy}) which is a
+predefined datatype in \emph{e}.
+Through constraining the proxy unit's \lstinline$type_name$ field
+(line~\ref{line_uvm_ml_e_proxy_keep}) the
+SystemVerilog component is integrated into the hierarchy. Thereby the string
+needs to be composed of \lstinline$target_frmw_indicator:component_type_name$, where
+\lstinline$target_frmw_indicator$ (case-insensitive) identifies the framework
+of the instantiated foreign child component and can be \emph{SV} for
+UVM-SystemVerilog, \emph{e} for UVM-\textit{e} or \emph{SC} for UVM-SystemC and
+\lstinline$component_type_name$ is the type of the instantiated component.
+
+\lstset{language=e, escapechar=|}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e} code example:
+instantiating the SystemVerilog component in the \textit{e} unit},
+label={lst:e_unified_top}]
+unit ubus_env {
+  uvc_top: child_component_proxy is instance;	|\label{line_uvm_ml_e_proxy}|
+    keep uvc_top.type_name =|\,\,|= "SV:ml_ubus_env";|\label{line_uvm_ml_e_proxy_keep}| 
+};
+\end{lstlisting}
+
+\paragraph{Instantiating an \textit{e} Unit Within a SystemVerilog Component}
+When reusing an \textit{e} unit inside of an SystemVerilog component it is
+necessary to integrate an proxy for the e unit within the SystemVerilog
+component and then connect both.\\
+As shown in listing~\ref{lst:SV_unified_top} this proxy component is created by
+declaring an component of type \lstinline$uvm_component$ inside the parent
+component (line~\ref{line_sv_declare_proxy}). In the \lstinline$build_phase$ this proxy component is
+instantiated via calling \lstinline$uvm_ml_create_component$ (line~\ref{line_sv_create_proxy}) with the following
+syntax:
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+function uvm_ml::child_component_proxy uvm_ml_create_component(
+  string target_frmw_indicator,
+  string component_type_name,
+  string instance_name,
+  uvm_component parent=null)}
+\end{lstlisting} 
+Where \lstinline$target_frmw_indicator$ indicates the framework adapter of the
+foreign component (see section~\ref{sv_inside_e}),
+\lstinline$component_type_name$ is the type of the foreign component according
+to its declaration inside its framework, \lstinline$instance_name$ is the name
+of the instance of the component proxy and \lstinline$parent$ is the handle of
+the parent instance (\lstinline$this$ indicates the current component).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog code example:
+instantiating an e unit}, label={lst:SV_unified_top}]
+class testbench extends uvm_env;
+  uvm_component xbus_uvc;|\label{line_sv_declare_proxy}|
+  `uvm_component_utils(testbench)
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    xbus_uvc = uvm_ml_create_component("e", "xbus_env_u", "xbus_uvc", this); |\label{line_sv_create_proxy}|
+  endfunction
+endclass : testbench
+\end{lstlisting}
+
+\subsubsection{Creating a \emph{Side-by-Side} Environment}
+
+\begin{figure}[htb]
+ \centering
+ %\includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_ML_side_by_side}
+ \includegraphics[scale=0.3]{abb/UVM_ML_side_by_side}
+ \caption{Structure of an \emph{side-by-side} environment}
+\label{fig:UVM_ML_side_by_side}
+\end{figure}
+
+\subsection{Configuring a Multi-Language Environment} \label{ml_config}
 - distribute config across the subcomponents\\
 \\
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
