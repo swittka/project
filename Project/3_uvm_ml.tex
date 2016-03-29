@@ -8,12 +8,46 @@
 \label{fig:UVM_ML_architecture}
 \end{figure}
 
+\subsection{Key concepts of UVM-ML}
+
 \subsection{Integrate Multi-Language Functionality into Incisive Enterprise
 Simulator}
-- where to get UVM-ML\\
-- how to install\\
-- problems with installation\\
-\\
+At the current state of work multi-language support can be integrated into Cadence Incisive Enterprise Simulator (IES)
+via an open source package provided by Accellera Systems Initiative and developed jointly by AMD and Cadence Design
+Systems. This package is called \emph{UVM-ML Open Architecture} and is provided as download on the Accellera website.
+For this paper version 1.5.1 of the package was used. After downloading and extracting it can be
+installed via the provided install script called \emph{install\_ies.csh} and the following steps using \emph{C shell}:
+
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+% setenv UVM_ML_HOME <install_dir>
+% set path= (<path_to_irun> $path)
+% source $UVM_ML_HOME/ml/install_ies.csh [--64bit] [--no-osci]
+\end{lstlisting} 
+\medskip 
+
+Using \emph{Bourne shell} the corresponding commands are:
+
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+% export UVM_ML_HOME=<install_dir>
+% export PATH=<path_to_irun>:$PATH
+% csh -c "source $UVM_ML_HOME/ml/install_ies.csh [--64bit] [--no-osci]"
+\end{lstlisting} 
+\medskip 
+
+Due to some problems with the installation on \emph{Ubuntu} it is recommended to use an alternative distribution like
+\emph{CentOS}. The environment variable \emph{UVM\_ML\_HOME} needs to point to the root directory of the UVM-ML
+package, which is \emph{UVM\_ML-1.5.1} for version 1.5.1. When already using IES, the standard setup script can be used
+instead of manually setting the path environment variable to the \emph{irun} installation. While sourcing
+\lstinline$install_ies.csh$ additional options can be used to control it. To install the environment on a 64 bit machine
+instead of an 32 bit one use \lstinline$--64bit$. If only the adapters for UVM-SystemVerilog and UVM-\textit{e} are
+required, UVM-ML can be build without the SystemC adapter via \lstinline$--no_osci$.\\
+After this intallation UVM-ML enables the creation of multi-language environments as well as running tests, which is
+discussed in the following sections.
+
 \subsection{Creating a Multi-Language Environment}
 A verification environment typically consists of a system UVC containing
 multiple subsystem UVCs, interface UVCs or module UVCs. These are composed in a
