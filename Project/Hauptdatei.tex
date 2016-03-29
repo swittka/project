@@ -103,7 +103,7 @@
   showstringspaces=false,
   basicstyle=\ttfamily\lst@ifdisplaystyle\footnotesize\else\normalsize\fi,
   captionpos=b}
-
+\renewcommand{\lstlistingname}{Example}
 \AtBeginDocument{
 \counterwithin{lstlisting}{section}
 }
@@ -112,11 +112,11 @@
 \makeindex
 
 % Abkürzungsverzeichnis
-\usepackage[german]{nomencl}
+\usepackage{nomencl}
 \let\abbrev\nomenclature
 
 % Abkürzungsverzeichnis LiveTex Version
-\renewcommand{\nomname}{Abkürzungsverzeichnis}
+\renewcommand{\nomname}{List of Abbreviations}
 \setlength{\nomlabelwidth}{.25\hsize}
 \renewcommand{\nomlabel}[1]{#1 \dotfill}
 \setlength{\nomitemsep}{-\parsep}
@@ -164,6 +164,9 @@
 %\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
 %\section*{ }
 
+%use roman page numbers starting on this page
+\pagenumbering{roman}
+
 % Titelseite %
 \include{latex_einstellungen/deckblatt}
 
@@ -189,21 +192,21 @@
 % Inhaltsverzeichnis anzeigen
 \newpage
 \tableofcontents
-
+\fancyhead[L]{}
 % das Abbildungsverzeichnis
-%\newpage
+\newpage
 % Abbildungsverzeichnis soll im Inhaltsverzeichnis auftauchen
-\addcontentsline{toc}{section}{Abbildungsverzeichnis}
+\addcontentsline{toc}{section}{List of Figures}
 % Abbildungsverzeichnis endgueltig anzeigen
 \listoffigures
 
 % das Tabellenverzeichnis
 %\newpage
 % Abbildungsverzeichnis soll im Inhaltsverzeichnis auftauchen
-\addcontentsline{toc}{section}{Tabellenverzeichnis}
+%\addcontentsline{toc}{section}{Tabellenverzeichnis}
 % \fancyhead[L]{Abbildungsverzeichnis / Abkürzungsverzeichnis} %Kopfzeile links
 % Abbildungsverzeichnis endgueltig anzeigen
-\listoftables
+%\listoftables
 
 %% WORKAROUND für Listings
 %\makeatletter% --> De-TeX-FAQ
@@ -226,18 +229,18 @@
 % das Listingverzeichnis
 %\newpage
 % Listingverzeichnis soll im Inhaltsverzeichnis auftauchen
-\addcontentsline{toc}{section}{Listingverzeichnis}
-\fancyhead[L]{Abbildungs- / Tabellen- / Listingverzeichnis} %Kopfzeile links
-\renewcommand{\lstlistlistingname}{Listingverzeichnis}
+\addcontentsline{toc}{section}{List of Examples}
+%\fancyhead[L]{Abbildungs- / Tabellen- / Listingverzeichnis} %Kopfzeile links
+\renewcommand{\lstlistlistingname}{List of Examples}
 \lstlistoflistings
 %%%%
 
 % das Abkürzungsverzeichnis
 %\newpage
 % Abkürzungsverzeichnis soll im Inhaltsverzeichnis auftauchen
-\addcontentsline{toc}{section}{Abkürzungsverzeichnis}
+\addcontentsline{toc}{section}{List of Abbreviations}
 % das Abkürzungsverzeichnis entgültige Ausgeben
-\fancyhead[L]{Abkürzungsverzeichnis} %Kopfzeile links
+%\fancyhead[L]{Abkürzungsverzeichnis} %Kopfzeile links
 \input{latex_einstellungen/abkuezungen/abkuerzungen}
 \printnomenclature
 
@@ -251,6 +254,9 @@
 
 % 1,5 facher Zeilenabstand
 \onehalfspacing
+
+%use arabic numbers starting with this page
+\pagenumbering{arabic}
 
 % einzelne Kapitel
 \include{1_introduction}

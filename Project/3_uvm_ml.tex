@@ -71,7 +71,7 @@ package for SystemVerilog (line~\ref{line_uvm_ml_package}).
 After that all additional multi-language functionalities can be put inside the
 class like configuring this sub component (see section~\ref{ml_config}) or data
 communication via TLM ports (see section~\ref{ml_tlm}).
-
+\medskip
 \lstset{language={SystemVerilog}, escapechar=|}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog code example: extended
 component}, label={lst:SV_unified_sub}]
@@ -86,21 +86,21 @@ class ml_ubus_env extends ubus_env;			|\label{line_extend_component}|
   endfunction : build_phase
 endclass : ml_ubus_env
 \end{lstlisting}
-
+\medskip
 Corresponding to the extensions in the SystemVerilog component the \textit{e}
 unit needs to include an proxy unit for it(see listing~\ref{lst:e_unified_top}).
 This can be done by instantiating an unit of type
 \lstinline$child_component_proxy$ (line~\ref{line_uvm_ml_e_proxy}) which is a
-predefined datatype in \emph{e}.
+predefined datatype in \textit{e}.
 Through constraining the proxy unit's \lstinline$type_name$ field
 (line~\ref{line_uvm_ml_e_proxy_keep}) the
 SystemVerilog component is integrated into the hierarchy. Thereby the string
 needs to be composed of \lstinline$target_frmw_indicator:component_type_name$, where
 \lstinline$target_frmw_indicator$ (case-insensitive) identifies the framework
-of the instantiated foreign child component and can be \emph{SV} for
-UVM-SystemVerilog, \emph{e} for UVM-\textit{e} or \emph{SC} for UVM-SystemC and
+of the instantiated foreign child component and can be \lstinline$SV$ for
+UVM-SystemVerilog, \lstinline$e$ for UVM-\textit{e} or \lstinline$SC$ for UVM-SystemC and
 \lstinline$component_type_name$ is the type of the instantiated component.
-
+\medskip
 \lstset{language=e, escapechar=|}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e} code example:
 instantiating the SystemVerilog component in the \textit{e} unit},
@@ -120,20 +120,25 @@ declaring an component of type \lstinline$uvm_component$ inside the parent
 component (line~\ref{line_sv_declare_proxy}). In the \lstinline$build_phase$ this proxy component is
 instantiated via calling \lstinline$uvm_ml_create_component$ (line~\ref{line_sv_create_proxy}) with the following
 syntax:
+\medskip
 \lstset{language={}, numbers=none, escapechar=|}
 \begin{lstlisting}
 function uvm_ml::child_component_proxy uvm_ml_create_component(
   string target_frmw_indicator,
   string component_type_name,
   string instance_name,
-  uvm_component parent=null)}
+  uvm_component parent=null)
 \end{lstlisting} 
+\medskip
 Where \lstinline$target_frmw_indicator$ indicates the framework adapter of the
 foreign component (see section~\ref{sv_inside_e}),
 \lstinline$component_type_name$ is the type of the foreign component according
 to its declaration inside its framework, \lstinline$instance_name$ is the name
 of the instance of the component proxy and \lstinline$parent$ is the handle of
-the parent instance (\lstinline$this$ indicates the current component).
+the parent instance (\lstinline$this$ indicates the current component).\\
+Because multi-language functionality is already integrated in UVM-\textit{e}, the child unit does not need any changes
+to support the creation of an \emph{unified hierarchy} environment.
+\medskip
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog code example:
 instantiating an e unit}, label={lst:SV_unified_top}]
@@ -150,6 +155,14 @@ endclass : testbench
 
 \subsubsection{Creating a \emph{Side-by-Side} Environment}
 
+When there is no need for creating an \emph{unified hierarchy} environment, UVM-ML supports also the ability to build an
+environment with multipe tops as can be seen in figure~\ref{fig:UVM_ML_side_by_side}. Here each tree inside of an
+framework has its root instantiated as top component. This architecture is called \emph{side-by-side} and best
+applicable when there is only limited synchronization required between the components of different frameworks. This is
+indicated by the limitations of the architecture. It is not possible to use multi-language configuration as described in
+section~\ref{ml_config}. Additionaly the behavior of the phase execution is limited. Here each phase is first executed
+completely on one tree before moving on to the next one. 
+
 \begin{figure}[htb]
  \centering
  %\includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_ML_side_by_side}
@@ -159,8 +172,38 @@ endclass : testbench
 \end{figure}
 
 \subsection{Configuring a Multi-Language Environment} \label{ml_config}
-- distribute config across the subcomponents\\
-\\
+
+After building a multi-language environment its often necessary to perform additional configurations before starting a
+test run. For example, setting an agent as passive respectively active or the number of resources available. In an
+environment with an \emph{unified hierarchy} such configurations can be propagated from one framework tree
+to all sub-trees in other frameworks. This is achieved by using the native UVM configuration constructs of each
+framework, which are listed below:
+\begin{itemize}
+\item{UVM-SystemVerilog:}
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+uvm_config_db#(T)::set()
+uvm_config_db#(T)::get()
+\end{lstlisting} 
+%\medskip
+
+\item{UVM-\textit{e}}
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+keep uvm_config_set()
+keep uvm_config_get()
+\end{lstlisting} 
+%\medskip
+\end{itemize}
+
+Each framework maintains its own configuration database. These are synchronized automatically via the multi-language
+backplane when a configuration is set. Thereby for getting the configuration information each framework just needs to
+access its local database.
+
+
+
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
 - tlm-port e -> sv\\
 - tlm-port sv -> e\\
@@ -171,3 +214,49 @@ endclass : testbench
 - create proxy sequencer\\
 - doing sequence items\\
 - doing sequences\\
+
+\subsection{Running an Multi-Language Environment with Incisive Enterprise Simulator}
+
+After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
+this with Incisive Enterprise Simulator (IES) provided by Cadence Design Systems Inc. Also a task of the
+UVM-SystemVerilog adapter is presented for this purpose, which provides an alternative option for running a testbench.
+
+\subsubsection{Setup IES for UVM-ML Mode}
+
+\subsubsection{Starting a test with the irun utility} \label{uvm_top}
+
+IES provides command line switches for its \lstinline$irun$ utility to declare the top component(s) of the testbench as
+well as the test to be started as shown below.
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+-uvmtest frmw_indicator:test_name
+-uvmtop frmw_indicator:top_name
+\end{lstlisting} 
+\medskip
+Both \lstinline$uvmtest$ as well as \lstinline$uvmtop$ firstly need to identify the framework adapter of the test
+respectively top component. This is done via \lstinline$frmw_indicator$ which can be \lstinline$SV$, \lstinline$e$ or
+\lstinline$SC$ as described in section~\ref{sv_inside_e}. Seperated via a colon comes the actual test/top component. For
+UVM-\textit{e} this is the full path of the file containing it. In contrast UVM-SystemVerilog along with UVM-SystemC use
+its component type name. So contrary to UVM-\textit{e} the full path to the file containing it has to be forwarded to
+\lstinline$irun$ prior to that.
+
+\subsubsection{Starting a test via the UVM-SystemVerilog adapter}
+
+Alternativly to these command line switches the UVM-SystemVerilog adapter supports a procedure call to set the top
+component(s) respectively the test of the multi-language testbench. The other adapters for UVM-\textit{e} and
+UVM-SystemC do not support such a call. So there is the only possibility to use the above mentioned command line
+switches. The task provided by the UVM-SystemVerilog adapter is called \lstinline$uvm_ml_run_test$ and has the following
+syntax:
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+task uvm_ml_run_test(
+  string tops[],
+  [string test = ""])
+\end{lstlisting} 
+\medskip
+Where \lstinline$tops[]$ is a dynamic array of top component identifiers and \lstinline$test$ represents a
+SystemVerilog or SystemC test component or the full path of an file containing an \textit{e} test unit. Both arguments
+support the same syntax as the command line switches to specify the components (see section~\ref{uvm_top}). The argument
+indicating the test component is optional for the purpose of just generating the multi-language environment.
