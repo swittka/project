@@ -1,5 +1,41 @@
 \section{Universal Verification Methodology Multi-Language}\label{uvm_ml}
 
+Verification projects consist of ready to use verification components, which are joined in a testbench. These components
+are often implemented in different verification languages like \emph{SystemVerilog}, \textit{e} or \emph{SystemC}. For
+example, when verification projects are normaly implemented in \textit{e}, but some components are intellectual property
+and provide UVCs implemented in \emph{SystemVerilog}. This leads to the demond of re-implementing fully operative code
+just for switching the verification language.\\
+This time consuming approach to this problem can be avoided by using the \emph{Universal Verification Methodology
+Multi-Language} (UVM-ML) package developed in cooperation of Advanced Micro Devices, Inc. (AMD) and Cadence Design
+Systems, Inc. It is based on the \emph{Universal Verification Methodology} and extends it multi-language
+functionalities. These enable the joined use of components implemented in different verification languages to build a
+single testbench with minimal changes of the reused components.\\
+This paper focuses on the two verification languages \emph{SystemVerilog} and \textit{e} both using the \emph{Universal
+Verification Methodology} to show the capabilities provided by UVM-ML. The simulator used for this is the
+\emph{Incisive Enterprise Simulator} developed by \emph{Cadence Design Systems, Inc.}\\
+The key concepts, which provide these capabilities are described in the following section. After that it is shown how to
+integrade multi-language functionalities into \emph{Incisive Enterprise Simulator}. Followed by the illustration on how
+to use it to create an multi-language environment, configure its sub-components and enable data communication between
+components. Finally it is declared how to start a test in this environment.
+
+\subsection{Key concepts of UVM-ML}
+
+The primary goal of the UVM-ML open architecture solution is to expand the UVM scope from a single language to multiple
+languages. Thereby it is independent of the simulator used and can be extended to support additional verification
+languages. The main elements used in the multi-language library are the language frameworks, the framework adapters and
+the multi-language backplane.
+\begin{itemize}
+  \item\textbf{Framework}\\
+  Frameworks are the combination of the language and the methodology used to develop verification components. Some
+  examples are \emph{UVM-SystemVerilog}, \emph{UVM-SystemC} and \emph{UVM-\textit{e}}.
+  \item\textbf{Backplane}\\
+  The backplane is the central component of the architecture and connects the frameworks in a star topology. It is only
+  internal to UVM-ML and cannot be accessed directly by the user code.
+  \item\textbf{Adapter}\\
+  Adapters build the bridge between frameworks and the backplane. It provides all multi-language functionalities to the
+  framework so it is unaware of the backplane.
+\end{itemize}
+
 \begin{figure}[htb]
  \centering
  %\includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_ML_unified}
@@ -8,7 +44,9 @@
 \label{fig:UVM_ML_architecture}
 \end{figure}
 
-\subsection{Key concepts of UVM-ML}
+The basic structure of the multi-language architecture is displayed in figure~\ref{fig:UVM_ML_architecture}. Each
+framework accesses the backplane exclusively through its corresponding adapter. There are only the three adapters shown,
+which are provided by the UVM-ML package, but it can be extended to support other frameworks as well.
 
 \subsection{Integrate Multi-Language Functionality into Incisive Enterprise
 Simulator}
@@ -43,8 +81,8 @@ Due to some problems with the installation on \emph{Ubuntu} it is recommended to
 package, which is \emph{UVM\_ML-1.5.1} for version 1.5.1. When already using IES, the standard setup script can be used
 instead of manually setting the path environment variable to the \emph{irun} installation. While sourcing
 \lstinline$install_ies.csh$ additional options can be used to control it. To install the environment on a 64 bit machine
-instead of an 32 bit one use \lstinline$--64bit$. If only the adapters for UVM-SystemVerilog and UVM-\textit{e} are
-required, UVM-ML can be build without the SystemC adapter via \lstinline$--no_osci$.\\
+instead of an 32 bit one use \lstinline$--64bit$. If only the adapters for UVM-SystemVerilog, UVM-SystemC and
+UVM-\textit{e} are required, UVM-ML can be build without the ASI-SystemC adapter via \lstinline$--no_osci$.\\
 After this intallation UVM-ML enables the creation of multi-language environments as well as running tests, which is
 discussed in the following sections.
 
@@ -207,8 +245,8 @@ completely on one tree before moving on to the next one.
 
 \subsection{Configuring a Multi-Language Environment} \label{ml_config}
 
-After building a multi-language environment its often necessary to perform additional configurations before starting a
-test run. For example, setting an agent as passive respectively active or the number of resources available. In an
+After building a multi-language environment it is often necessary to perform additional configurations before starting a
+test. For example, setting an agent as passive respectively active or the number of resources available. In an
 environment with an \emph{unified hierarchy} such configurations can be propagated from one framework tree
 to all sub-trees in other frameworks. This is achieved by using the native UVM configuration constructs of each
 framework, which are listed below:
@@ -234,9 +272,7 @@ keep uvm_config_get()
 
 Each framework maintains its own configuration database. These are synchronized automatically via the multi-language
 backplane when a configuration is set. Thereby for getting the configuration information each framework just needs to
-access its local database.
-
-
+access its local database, which hides the multi-language functionality from each framework.
 
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
 - tlm-port e -> sv\\
