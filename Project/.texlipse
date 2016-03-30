@@ -1,5 +1,5 @@
 #TeXlipse project settings
-#Wed Oct 28 09:44:11 CET 2015
+#Wed Mar 30 09:09:58 CEST 2016
 markTmpDer=true
 builderNum=2
 outputDir=
@@ -8,7 +8,7 @@ bibrefDir=
 outputFormat=pdf
 tempDir=tmp
 mainTexFile=Hauptdatei.tex
-outputFile=document.pdf
+outputFile=project_uvm_ml_wittka.pdf
 langSpell=en
 markDer=true
 srcDir=

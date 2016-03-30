@@ -1,11 +1,15 @@
 \section{Universal Verification Methodology Multi-Language}\label{uvm_ml}
-
+\todo[inline]{all emph are set for names}
+\todo[inline]{textit for e}
+\todo[inline]{nice layout}
+\todo[inline]{do not mix framework and verification language}
+\todo[inline]{abbreviations introduced only once}
 Verification projects consist of ready to use verification components, which are joined in a testbench. These components
 are often implemented in different verification languages like \emph{SystemVerilog}, \textit{e} or \emph{SystemC}. For
-example, when verification projects are normaly implemented in \textit{e}, but some components are intellectual property
-and provide UVCs implemented in \emph{SystemVerilog}. This leads to the demond of re-implementing fully operative code
-just for switching the verification language.\\
-This time consuming approach to this problem can be avoided by using the \emph{Universal Verification Methodology
+example, when verification projects are normally implemented in \textit{e}, but some components are intellectual
+property and provide UVCs implemented in \emph{SystemVerilog}. This leads to the demand of re-implementing fully
+operative code just for switching the verification language.\\
+Such a time consuming approach to this problem can be avoided by using the \emph{Universal Verification Methodology
 Multi-Language} (UVM-ML) package developed in cooperation of Advanced Micro Devices, Inc. (AMD) and Cadence Design
 Systems, Inc. It is based on the \emph{Universal Verification Methodology} and extends it multi-language
 functionalities. These enable the joined use of components implemented in different verification languages to build a
@@ -14,7 +18,7 @@ This paper focuses on the two verification languages \emph{SystemVerilog} and \t
 Verification Methodology} to show the capabilities provided by UVM-ML. The simulator used for this is the
 \emph{Incisive Enterprise Simulator} developed by \emph{Cadence Design Systems, Inc.}\\
 The key concepts, which provide these capabilities are described in the following section. After that it is shown how to
-integrade multi-language functionalities into \emph{Incisive Enterprise Simulator}. Followed by the illustration on how
+integrate multi-language functionalities into \emph{Incisive Enterprise Simulator}. Followed by the illustration on how
 to use it to create an multi-language environment, configure its sub-components and enable data communication between
 components. Finally it is declared how to start a test in this environment.
 
@@ -29,11 +33,12 @@ the multi-language backplane.
   Frameworks are the combination of the language and the methodology used to develop verification components. Some
   examples are \emph{UVM-SystemVerilog}, \emph{UVM-SystemC} and \emph{UVM-\textit{e}}.
   \item\textbf{Backplane}\\
-  The backplane is the central component of the architecture and connects the frameworks in a star topology. It is only
-  internal to UVM-ML and cannot be accessed directly by the user code.
+  The backplane is the central component of the multi-language architecture and connects the frameworks in a star
+  topology.
+  It is only internal to UVM-ML and cannot be accessed directly by the user code.
   \item\textbf{Adapter}\\
-  Adapters build the bridge between frameworks and the backplane. It provides all multi-language functionalities to the
-  framework so it is unaware of the backplane.
+  Adapters build the bridge between frameworks and the backplane. They provide all multi-language functionalities for
+  the frameworks so they are unaware of the backplane.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -108,14 +113,14 @@ this component (this can be seen in figure~\ref{fig:UVM_ML_unified}). Then the
 backplane applies operations which are performed on the proxy to the
 corresponding component in the other verification language. This gives the
 opportunity to use some of UVM-ML's benefits. It is possible to use a predefined
-phasing in this environment. Where phases like build, connect or run are
+phasing in this environment, where phases like build, connect or run are
 performed depth-first to ensure that dependencies between the components of
-different frameworks are resolved in the right way. Also sub components can be
+different frameworks are resolved in the right way. Also sub-components can be
 configured which increases the reusability of the environment, because when the
 environment is included in some other environment, only the top component needs
-to be configured and all sub components are configured automatically. Because of
+to be configured and all sub-components are configured automatically. Because of
 this it is recommended to implement such an environment.\\
-Following it is described how to create a \emph{unified hierachy} which
+Following it is described how to create a \emph{unified hierarchy} which
 instantiates a SystemVerilog component within an \textit{e} unit and vice versa.
 
 \begin{figure}[htb]
@@ -132,7 +137,7 @@ When instantiating a SystemVerilog component within an \textit{e} unit,
 it is necessary to instantiate a proxy unit inside the \textit{e} unit. After that the
 proxy unit and the SystemVerilog component need to be connected. \\
 An example for the code of the extended SystemVerilog component can be seen in
-listing~\ref{lst:SV_unified_sub}).
+\emph{example~\ref{lst:SV_unified_sub}}.
 It is recommended to extend the SystemVerilog component
 (line~\ref{line_extend_component}) which will
 be reused and then put all multi-language functionalities inside this new
@@ -141,12 +146,11 @@ non-multi-language environments. The extended one needs to include the UVM
 package (line~\ref{line_uvm_package}/\ref{line_uvm_macros}) as well as the adapter
 package for SystemVerilog (line~\ref{line_uvm_ml_package}).
 After that all additional multi-language functionalities can be put inside the
-class like configuring this sub component (see section~\ref{ml_config}) or data
+class like configuring this sub-component (see section~\ref{ml_config}) or data
 communication via TLM ports (see section~\ref{ml_tlm}).
 \medskip
-\lstset{language={SystemVerilog}, escapechar=|}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog code example: extended
-component}, label={lst:SV_unified_sub}]
+\lstset{language={SystemVerilog}, numbers=left, escapechar=|}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: extended component}, label={lst:SV_unified_sub}]
 import uvm_pkg::*;					|\label{line_uvm_package}|
 `include "uvm_macros.svh"			|\label{line_uvm_macros}|
 import uvm_ml::*;					|\label{line_uvm_ml_package}|
@@ -160,10 +164,10 @@ endclass : ml_ubus_env
 \end{lstlisting}
 \medskip
 Corresponding to the extensions in the SystemVerilog component the \textit{e}
-unit needs to include an proxy unit for it(see listing~\ref{lst:e_unified_top}).
+unit needs to include an proxy unit for it (see \emph{example~\ref{lst:e_unified_top}}).
 This can be done by instantiating an unit of type
 \lstinline$child_component_proxy$ (line~\ref{line_uvm_ml_e_proxy}) which is a
-predefined datatype in \textit{e}.
+predefined data type in \textit{e}.
 Through constraining the proxy unit's \lstinline$type_name$ field
 (line~\ref{line_uvm_ml_e_proxy_keep}) the
 SystemVerilog component is integrated into the hierarchy. Thereby the string
@@ -173,9 +177,8 @@ of the instantiated foreign child component and can be \lstinline$SV$ for
 UVM-SystemVerilog, \lstinline$e$ for UVM-\textit{e} or \lstinline$SC$ for UVM-SystemC and
 \lstinline$component_type_name$ is the type of the instantiated component.
 \medskip
-\lstset{language=e, escapechar=|}
-\begin{lstlisting}[frame=htrbl, caption={\textit{e} code example:
-instantiating the SystemVerilog component in the \textit{e} unit},
+\lstset{language=e, numbers=left, escapechar=|}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: instantiating the SystemVerilog component in the \textit{e} unit},
 label={lst:e_unified_top}]
 unit ubus_env {
   uvc_top: child_component_proxy is instance;	|\label{line_uvm_ml_e_proxy}|
@@ -187,7 +190,7 @@ unit ubus_env {
 When reusing an \textit{e} unit inside of an SystemVerilog component it is
 necessary to integrate an proxy for the e unit within the SystemVerilog
 component and then connect both.\\
-As shown in listing~\ref{lst:SV_unified_top} this proxy component is created by
+As shown in \emph{example~\ref{lst:SV_unified_top}} this proxy component is created by
 declaring an component of type \lstinline$uvm_component$ inside the parent
 component (line~\ref{line_sv_declare_proxy}). In the \lstinline$build_phase$ this proxy component is
 instantiated via calling \lstinline$uvm_ml_create_component$ (line~\ref{line_sv_create_proxy}) with the following
@@ -212,8 +215,7 @@ Because multi-language functionality is already integrated in UVM-\textit{e}, th
 to support the creation of an \emph{unified hierarchy} environment.
 \medskip
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog code example:
-instantiating an e unit}, label={lst:SV_unified_top}]
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: instantiating an e unit}, label={lst:SV_unified_top}]
 class testbench extends uvm_env;
   uvm_component xbus_uvc;|\label{line_sv_declare_proxy}|
   `uvm_component_utils(testbench)
@@ -228,11 +230,11 @@ endclass : testbench
 \subsubsection{Creating a \emph{Side-by-Side} Environment}
 
 When there is no need for creating an \emph{unified hierarchy} environment, UVM-ML supports also the ability to build an
-environment with multipe tops as can be seen in figure~\ref{fig:UVM_ML_side_by_side}. Here each tree inside of an
+environment with multiple tops as displayed in figure~\ref{fig:UVM_ML_side_by_side}. Here each tree inside of an
 framework has its root instantiated as top component. This architecture is called \emph{side-by-side} and best
 applicable when there is only limited synchronization required between the components of different frameworks. This is
 indicated by the limitations of the architecture. It is not possible to use multi-language configuration as described in
-section~\ref{ml_config}. Additionaly the behavior of the phase execution is limited. Here each phase is first executed
+section~\ref{ml_config}. Additionally the behavior of the phase execution is limited. Here each phase is first executed
 completely on one tree before moving on to the next one. 
 
 \begin{figure}[htb]
@@ -274,16 +276,126 @@ Each framework maintains its own configuration database. These are synchronized 
 backplane when a configuration is set. Thereby for getting the configuration information each framework just needs to
 access its local database, which hides the multi-language functionality from each framework.
 
+\subsubsection{\textit{e} Units Configuring \emph{SystemVerilog} Components}
+
+When configuring \emph{SystemVerilog} Components via \textit{e} units it is necessary to distinguish two cases. Firstly
+configuring it via primitive data types, where the data can directly be registered and obtained and secondly using
+configuration objects, which requires to obtain the object using its base class followed by a cast to its proper data
+type.
+
+\paragraph{Configuring \emph{SystemVerilog} Components using Primitive Data Types}\label{config_sv_primitive}
+
+When data is passed from an \textit{e} unit to a \emph{SystemVerilog} component,
+the \textit{e} unit needs to constrain \lstinline$uvm_config_set()$ as shown in \emph{example~\ref{lst:e_set_int}}
+line~\ref{line_e_set_int}. In this example the value \lstinline$16'h7fff$ is assigned to the variable
+\lstinline$slave0_max$ in all components, which contain the letters \lstinline$ubus_env$ in their full path.
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: register an integer in configuration database},
+label={lst:e_set_int}]
+extend testbench {
+    keep uvm_config_set("*ubus_env*", "slave0_max", 16'h7fff);|\label{line_e_set_int}|
+};
+\end{lstlisting}
+
+After the configuration is set in the database by the \textit{e} unit, the \emph{SystemVerilog} component needs to get
+the value from its database. When it has an primitive data type like an integer as in \emph{example~\ref{lst:SV_get_int}},
+the corresponding \lstinline$uvm_config_*::get()$ method should be used as shown in line~\ref{line_sv_get_int}. Here the
+value of \lstinline$slave0_max$ registered for this component in the database is assigned to the variable with the same
+name, \lstinline$slave0_max$.\\
+When the field was specified with the corresponding \lstinline$uvm_field_*$ macro, calling
+\lstinline$uvm_config_*::get()$ is not required. Its value is automatically retrieved from the configuration database.
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting an integer from configuration database},
+label={lst:SV_get_int}]
+class ml_ubus_env extends ubus_env;
+  int slave0_max;|\label{line_sv_declare_int}|
+  function void end_of_elaboration_phase(uvm_phase phase);
+    void'(uvm_config_int::get(this, "", "slave0_max", slave0_max));|\label{line_sv_get_int}|
+  endfunction : end_of_elaboration_phase
+endclass
+\end{lstlisting}
+
+\paragraph{Configuring \emph{SystemVerilog} Components using objects}
+
+When using configuration objects instead of primitive data types, the \textit{e} unit can access its configuration
+database the same way as with an primitive data type as shown in \emph{example~\ref{lst:e_set_object}}. In this example
+an object of type \lstinline$data$ is created (line~\ref{line_e_declare_object}) and then registered in the
+configuration database (line~\ref{line_e_set_object}) the same way as for primitive data types
+(section~\ref{config_sv_primitive}).
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={e: register an object in configuration database}, label={lst:e_set_object}]
+struct data {
+  % addr    : int;
+  % trailer : int;
+  % txt     : string;
+};
+
+unit u {
+  my_sv_child: child_component_proxy is instance;
+    keep my_sv_child.type_name == "SV:test";
+  
+  d : data;|\label{line_e_declare_object}|
+    keep d.addr    == 10;
+    keep d.trailer == 20;
+    keep d.txt     == "config object msg";
+
+  keep uvm_config_set("my_sv_child","conf_data",d);|\label{line_e_set_object}|
+};
+\end{lstlisting}
+\todo{you don't need to cast}
+The difference between configuring a SystemVerilog component using a primitive data type compared to an object
+is displayed in \emph{example~\ref{lst:SV_get_object}}. Additionally to the declaration of the object in
+line~\ref{line_sv_declare_object} another one of type \lstinline$uvm_object$ is required
+(line~\ref{line_sv_declare_data}). This is because the configuration database only supports primitive data types as well
+as the base type \lstinline$uvm_object$. So configuration objects need to be derived from this base type as shown in
+line~\ref{line_sv_class_object} (\lstinline$uvm_transaction$ inherits from \lstinline$uvm_object$).\\
+When the field of type \lstinline$uvm_object$ was specified with the \lstinline$uvm_field_object$ macro, calling
+\lstinline$uvm_config_object::get()$ is not required. Its value is automatically retrieved from the configuration
+database and can then be casted directly to the proper data type.
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting a configuration object}, label={lst:SV_get_object}]
+class data extends uvm_transaction;|\label{line_sv_class_object}|
+  int addr;
+  int trailer;
+  string txt;
+  
+  `uvm_object_utils_begin(data)
+    `uvm_field_int(   addr,    UVM_ALL_ON)
+    `uvm_field_int(   trailer, UVM_ALL_ON)
+    `uvm_field_string(txt,     UVM_ALL_ON)
+  `uvm_object_utils_end
+endclass
+
+class test extends uvm_env;
+  uvm_object tmp_obj;|\label{line_sv_declare_object}|
+  data conf_data;|\label{line_sv_declare_data}|
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    void'(uvm_config_object::get(this,"","conf_data", tmp_obj));|\label{line_sv_get_object}|
+    assert($cast(conf_data,tmp_obj)!=0);|\label{line_sv_cast_object}|
+  endfunction
+endclass
+\end{lstlisting}
+
+\subsubsection{SystemVerilog Components Configuring \textit{e} Units}
+\todo[inline]{sv configure e}
+
+
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
-- tlm-port e -> sv\\
-- tlm-port sv -> e\\
-- type mapping\\
-\\
+\todo[inline]{tlm-port e -> sv}
+\todo[inline]{tlm-port sv -> e}
+\todo[inline]{type mapping}
+
 \subsection{Sequence Layering in a Multi-Language Environment}
-- adding tlm interface\\
-- create proxy sequencer\\
-- doing sequence items\\
-- doing sequences\\
+\todo[inline]{adding tlm interface}
+\todo[inline]{create proxy sequencer}
+\todo[inline]{doing sequence items}
+\todo[inline]{doing sequences}
 
 \subsection{Running an Multi-Language Environment with Incisive Enterprise Simulator}
 
@@ -292,7 +404,7 @@ this with Incisive Enterprise Simulator (IES) provided by Cadence Design Systems
 UVM-SystemVerilog adapter is presented for this purpose, which provides an alternative option for running a testbench.
 
 \subsubsection{Setup IES for UVM-ML Mode}
-
+\todo[inline]{setup testbench}
 \subsubsection{Starting a test with the irun utility} \label{uvm_top}
 
 IES provides command line switches for its \lstinline$irun$ utility to declare the top component(s) of the testbench as
