@@ -437,7 +437,12 @@ unit xbus_config_u {
 \end{lstlisting}
 \paragraph{Configuring \textit{e} units using Objects}
 \todo[inline]{objects}
-Like \emph{SystemVerilog} components (section~\ref{e_config_sv_object}), \textit{e} units can be configured via objects. 
+Like \emph{SystemVerilog} components, \textit{e} units can be configured via objects. An example for registering an
+object in the configuration database via an \emph{SystemVerilog} component is described in
+example~\ref{lst:SV_set_object}. Firstly the component needs to declare the type of the object
+(line~\ref{line_sv_class_object_2}). After registering the object at the configuration database with
+\lstinline$uvm_config_db#(T)::set()$ (line~\ref{line_sv_set_user_object}), the foreign child component, which uses the
+configuration object, can be created (line~\ref{line_sv_comp_object_2}).
 
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an object in configuration database},
@@ -463,15 +468,23 @@ class test extends uvm_env;
     conf_data.addr = 10;
     conf_data.trailer = 20;
     conf_data.txt = "config object msg"
-    void'(uvm_config_db#(data)::set(this,"my_e_child","conf_data",conf_data));|\label{line_sv_set_user_object}|
+    void'(uvm_config_db#(data)::set(this, "my_e_child", "conf_data", conf_data));|\label{line_sv_set_user_object}|
     my_e_child = uvm_ml_create_component("e", "child_u", "my_e_child", this);|\label{line_sv_comp_object_2}|
   endfunction
 endclass
 \end{lstlisting}
 
+Similar to the \emph{SystemVerilog} component, the type of the configuration object needs to be declared in the
+\textit{e} unit, too (line~\ref{line_e_declare_object_2}). These declarations need to be mapped onto each other. This
+means that they need the same number and order of fields as well as matching type names. See section~\ref{type_mapping}
+for more information about type mapping.\\
+If the declarations match, the \textit{e} unit simply needs to instantiate the configuration object
+(line~\ref{line_e_declare_object_2}) and constrain \lstinline$uvm_config_get()$ to obtain the object from the
+configuration database.
+
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={e: getting an object from configuration database}, label={lst:e_get_object}]
-struct data {
+struct data {|\label{line_e_declare_object_2}|
   % addr    : int;
   % trailer : int;
   % txt     : string;
