@@ -319,7 +319,7 @@ class ml_ubus_env extends ubus_env;
 endclass
 \end{lstlisting}
 
-\paragraph{Configuring \emph{SystemVerilog} Components using objects}
+\paragraph{Configuring \emph{SystemVerilog} Components using Objects}\label{e_config_sv_object}
 
 When using configuration objects instead of primitive data types, the \textit{e} unit can access its configuration
 database the same way as with an primitive data type as shown in \emph{example~\ref{lst:e_set_object}}. In this example
@@ -389,15 +389,65 @@ class test extends uvm_env;
   endfunction
 endclass
 \end{lstlisting}
+It is important that the declarations of the configuration object in both verification languages are mapped to each
+other. This includes the number and order of variables as well as the name of the type definition. For more information
+on type mapping see section~\ref{type_mapping}.
 
 \subsubsection{SystemVerilog Components Configuring \textit{e} Units}
-\todo[inline]{sv configure e}
 Similar to section~\ref{e_config_sv} \emph{SystemVerilog} components can configure \textit{e} units via the
-configuration database. 
+configuration database. The syntax remains the same, just the part of getting respectively setting is switched for both
+frameworks. The field that should be configured has to be registered in the database from the \emph{SystemVerilog}
+component prior to creating the sub-component. Then the \textit{e} unit needs to be constrained using
+\lstinline$uvm_config_get()$ to receive the value from the configuration database.
 
+\paragraph{Configuring \textit{e} units using Primitive Data Types}
+When configuring an \textit{e} unit via a \emph{SystemVerilog} component, the component needs to register the value in
+the configuration database by calling \lstinline$uvm_config_*::set()$. This needs to be
+done before creating the foreign sub-component, which uses the field. That is necessary so the constraint solver of
+\textit{e} can access the database, when the unit is instantiated. This is displayed in example~\ref{lst:SV_set_int},
+that shows the SystemVerilog component, which configurates a field of type integer within an \textit{e} unit. Firstly
+the integer is registered at the configuration database in line~\ref{line_sv_set_int}. The parameters for
+\lstinline$uvm_config_*::set$ After that the component, which uses this registered field, is created in
+line~\ref{line_sv_comp_int}.
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an integer in configuration database},
+label={lst:SV_set_int}]
+class sys_env extends uvm_env;
+  uvm_component xbus_e_uvc;
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    uvm_config_int::set(this,"*xbus_config_u*","min_addr", 10);|\label{line_sv_set_int}|
+    xbus_e_uvc = uvm_ml_create_component("e", "xbus_env_u", "xbus_e_uvc", this);|\label{line_sv_comp_int}|
+  endfunction : build_phase
+endclass : sys_env
+\end{lstlisting}
+
+Once the field is registered in the configuration database, the \textit{e} unit just needs to constrain
+\lstinline$uvm_config_get$, as shown in example~\ref{lst:e_get_int}, line~\ref{line_e_get_int}. After that the value can
+be used inside of the unit.
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={e: getting an integer from configuration database}, label={lst:e_get_int}]
+unit xbus_config_u {
+  min_addr : xbus_addr_t;
+  keep soft uvm_config_get(min_addr); |\label{line_e_get_int}|
+};
+\end{lstlisting}
+\paragraph{Configuring \textit{e} units using Objects}
+\todo[inline]{objects}
+Like \emph{SystemVerilog} components (section~\ref{e_config_sv_object}), \textit{e} units can be configured via objects. 
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an object in configuration database},
+label={lst:SV_set_int}]
+
+\end{lstlisting}
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
 \todo[inline]{tlm-port e -> sv}
 \todo[inline]{tlm-port sv -> e}
+\subsubsection{Type Mapping}\label{type_mapping}
 \todo[inline]{type mapping}
 
 \subsection{Sequence Layering in a Multi-Language Environment}
