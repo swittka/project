@@ -276,12 +276,14 @@ Each framework maintains its own configuration database. These are synchronized 
 backplane when a configuration is set. Thereby for getting the configuration information each framework just needs to
 access its local database, which hides the multi-language functionality from each framework.
 
-\subsubsection{\textit{e} Units Configuring \emph{SystemVerilog} Components}
+\subsubsection{\textit{e} Units Configuring \emph{SystemVerilog} Components}\label{e_config_sv}
 
-When configuring \emph{SystemVerilog} Components via \textit{e} units it is necessary to distinguish two cases. Firstly
+When configuring \emph{SystemVerilog} components via \textit{e} units it is necessary to distinguish two cases. Firstly
 configuring it via primitive data types, where the data can directly be registered and obtained and secondly using
 configuration objects, which requires to obtain the object using its base class followed by a cast to its proper data
-type.
+type.\\
+Since UVM-ML version~1.4.4 the generic UVM-SystemVerilog syntax using \lstinline$uvm_config_db#(T)$ is supported, which
+provides a more convenient option to configure user defined data types. 
 
 \paragraph{Configuring \emph{SystemVerilog} Components using Primitive Data Types}\label{config_sv_primitive}
 
@@ -345,16 +347,20 @@ unit u {
   keep uvm_config_set("my_sv_child","conf_data",d);|\label{line_e_set_object}|
 };
 \end{lstlisting}
-\todo{you don't need to cast}
 The difference between configuring a SystemVerilog component using a primitive data type compared to an object
 is displayed in \emph{example~\ref{lst:SV_get_object}}. Additionally to the declaration of the object in
 line~\ref{line_sv_declare_object} another one of type \lstinline$uvm_object$ is required
-(line~\ref{line_sv_declare_data}). This is because the configuration database only supports primitive data types as well
-as the base type \lstinline$uvm_object$. So configuration objects need to be derived from this base type as shown in
+(line~\ref{line_sv_declare_data}). Configuration objects need to be derived from this base type as shown in
 line~\ref{line_sv_class_object} (\lstinline$uvm_transaction$ inherits from \lstinline$uvm_object$).\\
 When the field of type \lstinline$uvm_object$ was specified with the \lstinline$uvm_field_object$ macro, calling
 \lstinline$uvm_config_object::get()$ is not required. Its value is automatically retrieved from the configuration
-database and can then be casted directly to the proper data type.
+database and can then be casted directly to the proper data type.\\
+As mentioned previously, the generic syntax using \lstinline$uvm_config_db#(T)$ can be used to obtain configuration
+objects as an alternative to \lstinline$uvm_config_object$.
+The benefit of this approach is, that an additional cast after getting the object is not required as shown in
+line~\ref{line_sv_get_user_object}. The object with the user defined type \lstinline$data$ is directly obtained from
+the database, so line \ref{line_sv_declare_object}, \ref{line_sv_get_object} and \ref{line_sv_cast_object} are replaced
+by this single line of code.
 
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting a configuration object}, label={lst:SV_get_object}]
@@ -378,13 +384,16 @@ class test extends uvm_env;
     super.build_phase(phase);
     void'(uvm_config_object::get(this,"","conf_data", tmp_obj));|\label{line_sv_get_object}|
     assert($cast(conf_data,tmp_obj)!=0);|\label{line_sv_cast_object}|
+    //-- alternativly uvm_config_db can be used
+    //void'(uvm_config_db#(data)::get(this,"","conf_data",conf_data));|\label{line_sv_get_user_object}|
   endfunction
 endclass
 \end{lstlisting}
 
 \subsubsection{SystemVerilog Components Configuring \textit{e} Units}
 \todo[inline]{sv configure e}
-
+Similar to section~\ref{e_config_sv} \emph{SystemVerilog} components can configure \textit{e} units via the
+configuration database. 
 
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
 \todo[inline]{tlm-port e -> sv}
