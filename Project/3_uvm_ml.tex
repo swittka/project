@@ -441,8 +441,46 @@ Like \emph{SystemVerilog} components (section~\ref{e_config_sv_object}), \textit
 
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an object in configuration database},
-label={lst:SV_set_int}]
+label={lst:SV_set_object}]
+class data extends uvm_transaction;|\label{line_sv_class_object_2}|
+  int addr;
+  int trailer;
+  string txt;
+  
+  `uvm_object_utils_begin(data)
+    `uvm_field_int(   addr,    UVM_ALL_ON)
+    `uvm_field_int(   trailer, UVM_ALL_ON)
+    `uvm_field_string(txt,     UVM_ALL_ON)
+  `uvm_object_utils_end
+endclass
 
+class test extends uvm_env;
+  uvm_component my_e_child; 
+  data conf_data;|\label{line_sv_declare_data}|
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    conf_data.addr = 10;
+    conf_data.trailer = 20;
+    conf_data.txt = "config object msg"
+    void'(uvm_config_db#(data)::set(this,"my_e_child","conf_data",conf_data));|\label{line_sv_set_user_object}|
+    my_e_child = uvm_ml_create_component("e", "child_u", "my_e_child", this);|\label{line_sv_comp_object_2}|
+  endfunction
+endclass
+\end{lstlisting}
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={e: getting an object from configuration database}, label={lst:e_get_object}]
+struct data {
+  % addr    : int;
+  % trailer : int;
+  % txt     : string;
+};
+
+unit child_u {
+  conf_data : data;|\label{line_e_declare_object_2}|
+    keep soft uvm_config_get(conf_data);
+};
 \end{lstlisting}
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
 \todo[inline]{tlm-port e -> sv}
