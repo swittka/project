@@ -245,6 +245,86 @@ completely on one tree before moving on to the next one.
 \label{fig:UVM_ML_side_by_side}
 \end{figure}
 
+\subsection{Mapping Data Items Across Frameworks }\label{type_mapping}
+UVM-ML provides two options for data transfer between components of foreign frameworks. Firstly the configuration
+database (see section~\ref{ml_config}), which gives tha ability to customize the structure of the multi-language
+environment and secondly TLM communication for ongoing transfer of transactions between foreign components.\\
+Both of them require, that the types of the transfered transactions match in both frameworks as well as the
+serialization and de-serialization needs to match to ensure data consistence for both communication partners.
+
+\subsubsection{Type Mapping}
+Type mapping in an multi-language environment means, that a user defined type definition, like a struct or class, in
+one framework is mapped to a corresponding type definition in another foreign framework. So the multi-language
+backplane needs to know, which type definitions shall be mapped onto each other. By default this is implicitly done by
+looking for equal type names.\\
+If type names differ, but the type descriptions should be mapped onto each other, the mapping can be done expicitly.
+For this purpose both, the SystemVerilog multi-language adapter as well as \textit{e} provide a function respectively
+statement, which are shown below. Thereby \lstinline$frmw_indicator$ describes the framework, in wich the type is
+declared (\lstinline$sv$ for UVM-SystemVerilog, \lstinline$e$ for UVM-\textit{e}) and \lstinline$type_name$ is the name
+of the type within its framework.
+\begin{itemize}
+  \item{UVM-SystemVerilog}
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+set_type_match("frmw_indicator:type_name", "frmw_indicator:type_name");
+\end{lstlisting} 
+  \item{UVM-\textit{e}}
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+uvm_ml_type_match "frmw_indicator:type_name" "frmw_indicator:type_name"
+\end{lstlisting} 
+\end{itemize}
+
+An example for both multi-language adapters mapping functionality is shown in example~\ref{lst:SV_type_mapping}
+respectively example~\ref{lst:e_type_mapping}, where the struct \lstinline$e_packet$ is mapped onto the class
+\lstinline$sv_packet$. Take into account, that the explicit type mapping only needs to occur in one component, either in
+the \emph{SystemVerilog} component (example~\ref{lst:SV_type_mapping}, line~\ref{line_sv_mapping}) or the
+\textit{e} unit (example~\ref{lst:e_type_mapping}, line~\ref{line_e_mapping}).
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: mapping \lstinline$sv_packet$ onto \lstinline$e_packet$},
+label={lst:SV_type_mapping}]
+class sv_packet extends uvm_transaction;
+  int data;
+  
+  `uvm_object_utils_begin(sv_packet)
+  `uvm_field_int(data, UVM_ALL_ON)|\label{line_sv_physical}|
+  `uvm_object_utils_end
+endclass : sv_packet
+
+class testbench extends uvm_env;
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    void'(set_type_match("e:e_packet", "sv:sv_packet"));|\label{line_sv_mapping}|
+  endfunction : build_phase
+endclass : testbench
+\end{lstlisting}
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: mapping \lstinline$sv_packet$ onto \lstinline$e_packet$},
+label={lst:e_type_mapping}]
+struct e_packet like any_struct {
+  %data : int;|\label{line_e_physical}|
+};
+
+uvm_ml_type_match "e:e_packet" "sv:sv_packet"|\label{line_e_mapping}|
+\end{lstlisting}
+
+\subsubsection{Serialization and De-Serialization}
+When transactions are transmitted across multiple frameworks, their representation inside of one framework cannot
+directly be transferred into a foreign framework. Even if they are composed of the same fields, the internal
+representation differ between frameworks. Therefore transactions are firstly serialized into an universal bitstream,
+then this bitstream is transmitted to the foreign framework and finally de-serialized to extract the transaction from
+it.\\
+UVM-SystemVerilog as well as UVM-\textit{e} support default serialization and de-serialization. To use this
+functionalities,  the order and type of fields in the transactions must match between the declarations. Only fields,
+which are marked with a leading \lstinline$%$ are used for serialization and de-serialization in UVM-\textit{e} (see
+example~\ref{lst:e_type_mapping}, line~\ref{line_e_physical} ) and other fields inside the struct are ignored. The same
+occurs in UVM-SystemVerilog for fields, if the \lstinline$`uvm_field_*$ macro is defined for them with the flag for
+packing/unpacking set within the macro (see example~\ref{lst:SV_type_mapping}, line~\ref{line_sv_physical}).\\
+If the default serialization and de-serialization cannot be applied to an transaction, manual ones can be created by
+implementing \lstinline$do_pack()$ as well as \lstinline$do_unpack()$ for UVM-SystemVerilog transactions and
+\lstinline$pack()$ as well as \lstinline$unpack$ for UVM-\textit{e}, but this is not further discussed in this paper. 
 \subsection{Configuring a Multi-Language Environment} \label{ml_config}
 
 After building a multi-language environment it is often necessary to perform additional configurations before starting a
@@ -436,7 +516,6 @@ unit xbus_config_u {
 };
 \end{lstlisting}
 \paragraph{Configuring \textit{e} units using Objects}
-\todo[inline]{objects}
 Like \emph{SystemVerilog} components, \textit{e} units can be configured via objects. An example for registering an
 object in the configuration database via an \emph{SystemVerilog} component is described in
 example~\ref{lst:SV_set_object}. Firstly the component needs to declare the type of the object
@@ -496,10 +575,20 @@ unit child_u {
 };
 \end{lstlisting}
 \subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
+Additionally to the configuration database, UVM-ML uses TLM communication to manage the communication between components
+of different frameworks. While communication via the configuration database only occurs once per item to build the
+structure of the testbench, TLM communication is used to establish ongoing communication between components during the
+test. Data transfer by use of UVM-ML TLM communication is achieved by serializing transactions sending this data to the
+destination component via the connected port and after that de-serializing it there.\\
+For this it is required, that backplane knows which types are mapped onto each other. Also the serialization and
+de-serialization need to match, so the same transaction is available at both components. This implies, that the number
+and order of fields in the user defined types have to be consistent.\\
+Here it is discussed how to establish TLM communication on the example of TLM analysis ports. For more information on
+type mapping see section~\ref{type_mapping}.
+\subsubsection{\textit{e} Units Sending Transactions to \emph{SystemVerilog} Components}
 \todo[inline]{tlm-port e -> sv}
+\subsubsection{\emph{SystemVerilog} Components Sending Transactions to \textit{e} Units}
 \todo[inline]{tlm-port sv -> e}
-\subsubsection{Type Mapping}\label{type_mapping}
-\todo[inline]{type mapping}
 
 \subsection{Sequence Layering in a Multi-Language Environment}
 \todo[inline]{adding tlm interface}
@@ -507,7 +596,7 @@ unit child_u {
 \todo[inline]{doing sequence items}
 \todo[inline]{doing sequences}
 
-\subsection{Running an Multi-Language Environment with Incisive Enterprise Simulator}
+\subsection{Running a Multi-Language Environment with Incisive Enterprise Simulator}
 
 After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
 this with Incisive Enterprise Simulator (IES) provided by Cadence Design Systems Inc. Also a task of the
