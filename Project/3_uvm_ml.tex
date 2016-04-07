@@ -622,28 +622,32 @@ Following examples for sending transactions from \textit{e} units to \emph{Syste
 vice versa are provided to show, how to utilize the above intruduced TLM functionalities for multi-language
 environments.
 \subsubsection{\textit{e} Units Sending Transactions to \emph{SystemVerilog} Components}
-\todo[inline]{tlm-port e -> sv}
-
+In example~\ref{lst:SV_TLM_consumer} is the implementation of an TLM implementation port in UVM-\emph{SystemVerilog}
+displayed. After declaring (line~\ref{line_sv_imp_declare}) and instantiating (line~\ref{line_sv_imp_inst}) the port, it
+is registered at the UVM-\emph{SystemVerilog} multi-language adapter (line~\ref{line_sv_imp_reg}).\\
+The corresponding UVM-\textit{e} producer is shown in example~\ref{lst:e_TLM_producer}. Its TLM port is implemented in
+line~\ref{line_e_port_inst} and following registered by constraining \lstinline$bind()$ in line~\ref{line_e_port_reg}.
+After both components are instantiated under \lstinline$sys$, their TLM ports are connected in line~\ref{line_e_connect}.
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: consumer side of an TLM connection},
 label={lst:SV_TLM_consumer}]
 class mod_monitor extends uvm_monitor;
-  uvm_analysis_imp#(packet, mod_monitor) in_port;
+  uvm_analysis_imp#(packet, mod_monitor) in_port;|\label{line_sv_imp_declare}|
   
   `uvm_component_utils(mod_monitor)
   
   function new(string name="mod_monitor", uvm_component parent);
     super.new(name, parent);
-    in_port = new("in_port", this);
+    in_port = new("in_port", this);|\label{line_sv_imp_inst}|
   endfunction 
   
   function void phase_ended(uvm_phase phase);
     if(phase.get_name() == "build") begin
-      uvm_ml::ml_tlm1#(packet)::register(in_port);
+      uvm_ml::ml_tlm1#(packet)::register(in_port);|\label{line_sv_imp_reg}|
     end
   endfunction : phase_ended
   
-  virtual function void write(packet pkt);
+  virtual function void write(packet pkt);|\label{line_sv_imp_write}|
   //...
   endfunction : write
 endclass
@@ -653,8 +657,8 @@ endclass
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: producer side of an TLM connection},
 label={lst:e_TLM_producer}]
 unit inf_monitor like uvm_monitor {
-  out_port : out interface_port of tlm_analysis of packet is instance;
-    keep soft bind(out_port, external);
+  out_port : out interface_port of tlm_analysis of packet is instance;|\label{line_e_port_inst}|
+    keep soft bind(out_port, external);|\label{line_e_port_reg}|
 };
 
 extend sys {
@@ -664,22 +668,26 @@ extend sys {
   
     
   connect_ports() is also {
-    uvm_connect_names("sys.monitor.outport", append(sv_mod_monitor.e_path(), ".in_port"));
+    uvm_connect_names("sys.monitor.outport", append(sv_mod_monitor.e_path(), ".in_port"));|\label{line_e_connect}|
   };  
 };
 \end{lstlisting}
 
 \subsubsection{\emph{SystemVerilog} Components Sending Transactions to \textit{e} Units}
-\todo[inline]{tlm-port sv -> e}
-
+Now the functionalities of consumer and producer are switched between both frameworks, so the TLM implementation port is
+realized in UVM-\textit{e} (example~\ref{lst:e_TLM_consumer}). It is instantiated in line~\ref{line_e_imp_inst} followed
+by its registration in line~\ref{line_e_imp_reg}.\\
+The producer is shown in example~\ref{lst:SV_TLM_producer}. Its TLM port is declared in line~\ref{line_sv_port_declare}
+and instantiated in line~\ref{line_sv_port_inst}. After that it is registered at the framework adapter in
+line~\ref{line_sv_port_reg}. Finally both ports are connected in line~\ref{line_sv_con}.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: consumer side of an TLM connection},
 label={lst:e_TLM_consumer}]
 unit mod_monitor like uvm_monitor {
-  in_port : in interface_port of tlm_analysis of packet is instance;
-    keep soft bind(out_port, external);
+  in_port : in interface_port of tlm_analysis of packet is instance;|\label{line_e_imp_inst}|
+    keep soft bind(out_port, external);|\label{line_e_imp_reg}|
     
-  write(pkt : packet) is {
+  write(pkt : packet) is {|\label{line_e_imp_write}|
   //...
   };
 };
@@ -689,18 +697,18 @@ unit mod_monitor like uvm_monitor {
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: producer side of an TLM connection},
 label={lst:SV_TLM_producer}]
 class inf_monitor extends uvm_monitor;
-  uvm_analysis_port#(packet) out_port;
+  uvm_analysis_port#(packet) out_port;|\label{line_sv_port_declare}|
   
   `uvm_component_utils(inf_monitor)
   
   function new(string name="inf_monitor", uvm_component parent);
     super.new(name, parent);
-    out_port = new("out_port", this);
+    out_port = new("out_port", this);|\label{line_sv_port_inst}|
   endfunction 
   
   function void phase_ended(uvm_phase phase);
     if(phase.get_name() == "build") begin
-      uvm_ml::ml_tlm1#(packet)::register(out_port);
+      uvm_ml::ml_tlm1#(packet)::register(out_port);|\label{line_sv_port_reg}|
     end
   endfunction : phase_ended
 endclass
@@ -718,16 +726,25 @@ class env extends uvm_env;
   endfunction : build_phase
   
   function void connect_phase(uvm_phase phase);
-    uvm_ml::connect(sv_inf_monitor.get_full_name(), {get_full_name(), ".e_mod_monitor.in_port"});
-  endfunction : connect_phase
+    uvm_ml::connect(sv_inf_monitor.get_full_name(), {get_full_name(),".e_mod_monitor.in_port"});|\label{line_sv_con}|
+    endfunction : connect_phase
 \end{lstlisting}
 
 \subsection{Sequence Layering in a Multi-Language Environment}
-\todo[inline]{adding tlm interface}
-\todo[inline]{create proxy sequencer}
-\todo[inline]{doing sequence items}
-\todo[inline]{doing sequences}
-
+\subsubsection{Constraining the Default Sequence}
+\paragraph{UVM-\textit{e} Constraining the UVM-SystemVerilog Default Sequence}
+\paragraph{UVM-SystemVerilog Constraining the UVM-\textit{e} Main Sequence}
+\subsubsection{Reusing Sequences of Foreign Frameworks}
+\paragraph{UVM-\textit{e} Sequences executing UVM-SystemVerilog Sequences and Items}
+\subparagraph{Extending the UVM-SystemVerilog Sequencer with a TLM Interface}
+\subparagraph{Creating an UVM-\textit{e} Proxy Sequencer}
+\subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequence Items}
+\subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequences}
+\paragraph{UVM-SystemVerilog Sequences executing UVM-\textit{e} Sequences and Items}
+\subparagraph{Extending the UVM-\textit{e} Sequencer with a TLM Interface}
+\subparagraph{Creating an UVM-SystemVerilog Proxy Sequencer}
+\subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequence Items}
+\subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequences}
 \subsection{Running a Multi-Language Environment with Incisive Enterprise Simulator}
 
 After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
