@@ -731,6 +731,12 @@ class env extends uvm_env;
 \end{lstlisting}
 
 \subsection{Sequence Layering in a Multi-Language Environment}
+The last step in creating an fully functional multi-language testbench is the stimuli generation. There are two typical
+use cases for handling a sequence library implemented in a foreign framework. Firstly configuring the default sequence
+of the sequencer contained in the foreign sub-component via the top level component, which requires minimal interaction between
+these components. The second case requires continues comunication between the sequences implemented in different
+framworks. Here a virtual sequence implemented at the top level ongoingly executes sequences of the sub-component.
+Folowing is discussed, which extentions are required to support the use of foreign sequences.
 \subsubsection{Constraining the Default Sequence}
 \paragraph{UVM-\textit{e} Constraining the UVM-SystemVerilog Default Sequence}
 \paragraph{UVM-SystemVerilog Constraining the UVM-\textit{e} Main Sequence}
@@ -749,7 +755,7 @@ class env extends uvm_env;
 
 After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
 this with Incisive Enterprise Simulator (IES) provided by Cadence Design Systems Inc. Also a task of the
-UVM-SystemVerilog adapter is presented for this purpose, which provides an alternative option for running a testbench.
+UVM-SystemVerilog adapter is presented for this purpose, which provides an alternative option for running a test.
 
 \subsubsection{Setup IES for UVM-ML Mode}
 \todo[inline]{setup testbench}
