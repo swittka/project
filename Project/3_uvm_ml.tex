@@ -737,14 +737,70 @@ of the sequencer contained in the foreign sub-component via the top level compon
 these components. The second case requires ongoing communication between the sequences implemented in different
 frameworks. Here a virtual sequence implemented at the top level continuously executes sequences of the sub-component.
 Following is discussed, which extensions are required to support the use of foreign sequences.
+
 \subsubsection{Configuring the Default Sequence}
 The simplest way to use foreign sequences is to configure the default sequence of the sequencer included in the foreign
 sub-component by using the configuration databases of both frameworks (see section~\ref{ml_config} for more detailed
 information about the configuration databases). This determines, which sequence is started when the test run begins.
-\paragraph{UVM-\textit{e} Constraining the UVM-SystemVerilog Default Sequence}
-\paragraph{UVM-SystemVerilog Constraining the UVM-\textit{e} Main Sequence}
+
+\paragraph{UVM-\textit{e} Configuring the UVM-SystemVerilog Default Sequence}
+Example~\ref{lst:SV_get_default_sequence} shows, which changes are necessary in the UVM-\emph{SystemVerilog} sub-component to make its default sequence configurable via a foreign UVM-\textit{e} unit. The communication between the foreign components is done by registering the name of the sequence at the configuration database. Therefore an variable for this string has to be defined (line~\ref{line_sv_seq_name_var}). Following this is used to get the name of the sequence from the database in line~\ref{line_sv_get_seq_name}. Afterwards the sequence is obtained from the factory by searching for it with the provided name (line~\ref{line_sv_find_seq_by_name}). Finally this sequence is used to set the default sequence of the sequencer included in the agent, which is contained in the base class of the multi-language component (line~\ref{line_sv_set_default_seq}).   
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting the default sequence from configuration database},
+label={lst:SV_get_default_sequence}]
+class ml_uvc_env extends uvc_env;
+  string seq_name; |\label{line_sv_seq_name_var}|
+  
+  function void build_phase(uvm_phase phase);
+    uvm_factory factory = uvm_factory::get();|\label{line_sv_get_factory_handle}|
+    uvm_object_wrapper seq_wrap;
+    super.build_phase(phase);
+    void'(uvm_config_string::get(this, "", "seq_name", seq_name));|\label{line_sv_get_seq_name}|
+    seq_wrap = factory.find_by_name(slave_seq_name);|\label{line_sv_find_seq_by_name}|
+    uvm_config_db#(uvm_object_wrapper)::set(this, "agent.sequencer.run_phase", "default_sequence", seq_wrap);|\label{line_sv_set_default_seq}|
+    endfunction
+endclass : ml_uvc_env
+\end{lstlisting}
+The UVM-\textit{e} unit needs to provide the name of the sequence used to configure the default sequence of the foreign sequencer. For this purpose the name is registered at the configuration database in line~\ref{line_e_set_default_seq} of example~\ref{lst:e_set_default_sequence}.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: setting the default sequence via configuration database},
+label={lst:e_set_default_sequence}]
+extend sys {
+  sv_uvc : child_component_proxy is instance;
+    keep sv_uvc.type_name == "SV:ml_uvc_env"
+    keep uvm_config_set("sv_uvc", "seq_name", "seq")|\label{line_e_set_default_seq}|
+};
+\end{lstlisting}
+\paragraph{UVM-SystemVerilog Configuring the UVM-\textit{e} Main Sequence}
+Reversed the configuration database can be used to configure the \emph{main} sequence of an UVM-\textit{e} unit by the enclosing UVM-\emph{SystemVerilog} component. Therefore the sequence driver of the sub-component has to be extended by a string variable, which is shown in line~\ref{line_e_get_seq_name} of example~\ref{lst:e_get_main_sequence}. It is used to store the name of the sequence, which is received from the configuration database in line~\ref{line_e_get_seq_name}. Afterwards the \emph{main} sequence is extended, so its \lstinline$kind$-field can be constrained to equal the sequence identified by the previously received string. It is necessary to mention, that \lstinline$driver$ refers to the \emph{sequence driver} of UVM-\textit{e} and should not be mistaken with the \emph{driver} class of UVM-\emph{SystemVerilog}. 
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: getting the \emph{main} sequence from configuration database},
+label={lst:e_get_main_sequence}]
+extend sequence_driver_u {
+  sequence_name : string;|\label{line_e_name_var}|
+    keep uvm_config_get(sequence_name);|\label{line_e_get_seq_name}|
+};
+
+extend MAIN sequence {
+  keep soft sequence.kind == driver.sequence_name.as_a(sequence_s);|\label{line_e_constrain_main_seq}|
+};
+\end{lstlisting}
+Finally the name of the sequence, which should be started, has to be registered in the configuration database by the top level UVM-\emph{SystemVerilog} component (example~\ref{lst:SV_set_main_sequence}). This is done in line~\ref{line_sv_set_main_seq}, where the name of the sequence is registered for all sub-components, which end with the string \emph{'driver'}.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: setting the default sequence via configuration database},
+label={lst:SV_set_main_sequence}]
+class svtop extends uvm_test;
+  function void build_phase(uvm_phase phase);
+    uvm_config_string::set(this, "*driver", "sequence_name", "SIMPLE_SEQ");|\label{line_sv_set_main_seq}|
+  endfunction : build_phase
+endclass : svtop
+\end{lstlisting}
 \subsubsection{Reusing Sequences of Foreign Frameworks}
+Since configuring the default sequence can only be done for a single sequence prior to starting the \emph{run} phase. Another approach has to be considered, when dealing with multiple sequences, which should be executed dynamically throughout the \emph{run} phase.
 \paragraph{UVM-\textit{e} Sequences executing UVM-SystemVerilog Sequences and Items}
+The above mentioned steps for executing multiple foreign sequences in a multi-language environment are now discussed in paticular for UVM-\textit{e} sequences, which execute foreign UVM-\emph{SystemVerilog} sub-sequences and sequence items.
 \subparagraph{Extending the UVM-SystemVerilog Sequencer with a TLM Interface}
 \subparagraph{Creating an UVM-\textit{e} Proxy Sequencer}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequence Items}
