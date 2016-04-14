@@ -142,6 +142,12 @@
 \widowpenalty = 10000
 \displaywidowpenalty = 10000
 
+\usepackage{titlesec}
+%\subparagraph starting new line after heading
+\titleformat{\subparagraph}
+    {\normalfont\normalsize\bfseries}{\thesubparagraph}{1em}{}
+\titlespacing*{\subparagraph}{\parindent}{3.25ex plus 1ex minus .2ex}{.75ex plus .1ex}
+
 % create additional subsection layer
 \makeatletter
 \renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}
