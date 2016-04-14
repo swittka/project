@@ -800,9 +800,52 @@ endclass : svtop
 \subsubsection{Reusing Sequences of Foreign Frameworks}
 Since configuring the default sequence can only be done for a single sequence prior to starting the \emph{run} phase. Another approach has to be considered, when dealing with multiple sequences, which should be executed dynamically throughout the \emph{run} phase. Firstly the sequencer of the foreign sub-component is extended with a TLM interface, so it can receive the information, which sequence is to be executed next and how to configure it. The counterpart of the TLM interface is implemented in a proxy sequencer of the top level component. Finally the sequence item as well as the sequences have to be exported, so they can be transmitted via the TLM interface. After that the foreign sequences can be used like they were native ones.
 \paragraph{UVM-\textit{e} Sequences executing UVM-SystemVerilog Sequences and Items}
-The above mentioned steps for executing multiple foreign sequences in a multi-language environment are now discussed in paticular for UVM-\textit{e} sequences, which execute foreign UVM-\emph{SystemVerilog} sub-sequences and sequence items.
+The above mentioned steps for executing multiple foreign sequences in a multi-language environment are now discussed in paticular for UVM-\textit{e} sequences executing foreign UVM-\emph{SystemVerilog} sub-sequences and sequence items.
 \subparagraph{Extending the UVM-SystemVerilog Sequencer by a TLM Interface}
+When extending the UVM-\emph{SystemVerilog} Sequencer by a TLM interface, the \emph{UVM-ML} package provides a template class for this sequencer TLM interface, located at:
+\smallskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/sv/seqr_tlm_interface.sv
+\end{lstlisting} 
+\smallskip
+In example~\ref{lst:SV_sequencer_tlm_if} it is shown how to utilize this template class. Firstly it is extended to support the base sequence and sequence item of the UVM-\emph{SystemVerilog} component (line~\ref{line_sv_extend_tlm_if}). After that the randomization of the fields inside the sequence item has to be disabled to apply the values provided by the UVM-\textit{e} sequencer proxy by implementing the virtual function \lstinline$uvm_sequence_item_set_fields()$ of the template class (line~\ref{line_sv_set_fields}). Inside of this method the randomization of each field of the sequence item has to be disabled (line~\ref{line_sv_disable_random}). The randomization has to be disabled for the fields, because after receiving the sequence item via the TLM interface, randomization is used to verify, that the item is valid according to its constraints. Otherwise the provided values would be lost in this process.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: creating the TLM interface for the sequencer},
+label={lst:SV_sequencer_tlm_if}]
+class sequencer_tlm_if extends ml_seqr_tlm_if#(packet, base_sequence);|\label{line_sv_extend_tlm_if}|
+  //use uvm_component_uitls macro here and implement constructor
+
+  function uvm_sequence_item set_fields(uvm_sequence_item item);|\label{line_sv_set_fields}|
+    packet pkt;   
+    if($cast(pkt, item)) begin
+      pkt.field_1.rand_mode(0);|\label{line_sv_disable_random}|
+      ...
+    end;
+    return pkt;      
+  endfunction : set_fields
+endclass : sequencer_tlm_if
+\end{lstlisting}
+After the TLM interface is implemented, it has to be integrated into the sequencer (example~\ref{lst:SV_sequencer_tlm}). To achieve this the sequencer is extended by a handle for the TLM interface (line~\ref{line_sv_declare_sequencer_tlm}). Followed by creating the interface via the UVM-\emph{SystemVerilog} factory in line~\ref{line_sv_create_sequencer_tlm}. At last a reference of the sequencer is added to the TLM interface, so the received sequences and sequence items can be forwarded to the sequencer. 
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: extending the sequencer by a TLM interface},
+label={lst:SV_sequencer_tlm}]
+class ml_sequencer extends sequencer;
+    sequencer_tlm_if seqr_tlm_if;|\label{line_sv_declare_sequencer_tlm}|
+    //use uvm_component_uitls macro here and implement constructor
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        seqr_tlm_if = sequencer_tlm_if::type_id::create("seqr_tlm_if", this);|\label{line_sv_create_sequencer_tlm}|
+    endfunction : build_phase
+
+    function void end_of_elaboration_phase(uvm_phase phase);
+        void'(seqr_tlm_if.set_seqr(this));|\label{line_sv_set_sequencer}|
+    endfunction : end_of_elaboration_phase
+endclass : ml_sequencer
+\end{lstlisting}
 \subparagraph{Creating an UVM-\textit{e} Proxy Sequencer}
+
 \subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequence Items}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequences}
 \paragraph{UVM-SystemVerilog Sequences executing UVM-\textit{e} Sequences and Items}
