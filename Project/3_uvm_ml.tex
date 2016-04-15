@@ -844,10 +844,100 @@ class ml_sequencer extends sequencer;
     endfunction : end_of_elaboration_phase
 endclass : ml_sequencer
 \end{lstlisting}
-\subparagraph{Creating an UVM-\textit{e} Proxy Sequencer}
+\subparagraph{Creating an UVM-\textit{e} Proxy Sequencer} 
+Next the proxy sequencer has to be implemented providing the ability to access the foreign sequencer by its TLM interface like displayed in example~\ref{lst:e_proxy_sequencer}. Initially two structs have to be created. One corresponding to the UVM-\emph{SystemVerilog} sequence item (line~\ref{line_e_struct_packet}) and the other contains all fields of the foreign base sequence from which all other sequences are derived (line~\ref{line_e_struct_base_sequence}) (see section~\ref{type_mapping} for detailed information on type mapping). The second struct can be left empty, if only sequence items are used.\\
+After that these two structs are used to create the proxy sequencer itself with its sequences. Therefore the \lstinline$sequence$ macro of UVM-\textit{e} is used (line~\ref{line_e_sequence_proxy}). It uses the previous defined struct representing the UVM-\emph{SystemVerilog} sequence item as its own one. Additionally it uses a template for the proxy sequencer provided by the \emph{UVM-ML} package located at:
+\smallskip
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/e/ml_base_seqr_proxy.e
+\end{lstlisting}
+\smallskip
+Following the abstract \lstinline$get()$ method of the just created proxy sequencer has to be implemented (line~\ref{line_e_abstract_get}). Either by calling \lstinline$get_next_item()$ to send the next sequence item to the remote sequencer via the TLM interface or by using \lstinline$wait @never$, if no items are sent at all. Afterwards the sequence proxy is extended by an abstract method \lstinline$get_exported_seq$ (line~\ref{line_e_abstract_get_exported_seq}) returning the corresponding sequence struct, which is after that sent to the foreign sequencer via the TLM inferface (line~\ref{line_e_send_sequence}).
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: creating a proxy sequencer},
+label={lst:e_proxy_sequencer}]
+struct packet like any_sequence_item {|\label{line_e_struct_packet}|
+... //--fields corresponding to the UVM-SystemVerilog sequence item
+};
 
+struct base_sequence like any_sequence_item {|\label{line_e_struct_base_sequence}|
+... //--fields corresponding to the UVM-SystemVerilog base sequence
+};
+
+sequence master_sequence using|\label{line_e_sequence_proxy}|
+    item = packet,
+    sequence_driver_type = ml_base_seqr_proxy of (base_sequence),
+    created_driver = seqr_proxy;
+
+extend seqr_proxy {
+    get(req : *any_sequence_item) @sys.any is only {|\label{line_e_abstract_get}|
+        req = get_next_item();
+        //wait @never;
+    };
+};
+
+extend master_sequence {
+    get_exported_seq() : base_sequence is {|\label{line_e_abstract_get_exported_seq}|
+        return NULL;
+    };
+
+    body() @sys.any is only {
+        driver.send_sequence(get_exported_seq());|\label{line_e_send_sequence}|
+    };
+};
+\end{lstlisting}
+Finally the TLM interfaces of the foreign sequencer and the sequencer proxy have to be connected (example~\ref{lst:e_connect_proxy}). The previous mentioned template for the proxy sequencer contains a \lstinline$connect_proxy()$ method for this purpose. Its argument consists of the string representing the full path to the TLM interface of the remote sequencer (line~\ref{line_e_connect_proxy}).
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: connecting the proxy sequencer and foreign sequencer},
+label={lst:e_connect_proxy}]
+extend sys {
+  sv_sequencer : child_component_proxy is instance;
+    keep sv_sequencer.type_name == "sv:ml_sequencer"
+  proxy_sequencer : seqr_proxy is instance;
+  
+  connect_ports() is also {
+    proxy_sequencer.connect_proxy(append(sv_sequencer.e_path(), seqr_tlm_if));|\label{line_e_connect_proxy}|
+  }; 
+};
+\end{lstlisting}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequence Items}
+After extending the foreign sequencer by a TLM interface, creating a proxy sequencer in UVM-\textit{e} and connecting both, the environment is now ready to execute UVM-\emph{SystemVerilog} sequence items via an UVM-\textit{e} sequence. To be more specific, the sequence creates a proxy sequence item and passes it to the sequencer proxy. After that the item is propagated to the remote sequencer via the TLM interface and is then used as an native sequence item inside of the UVM-\emph{SystemVerilog} component.\\
+Example~\ref{lst:e_send_sequence_item} shows, that foreign sequence items can now be treated like native ones inside of UVM-\textit{e} sequences.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: sending an UVM-\emph{SystemVerilog} sequence item  from  an UVM-\textit{e} sequence},
+label={lst:e_send_sequence_item}]
+extend master_sequence_kind : [SINGLE_ITEM];
+
+extend_SINGLE_ITEM master_sequence {
+  !req : packet;
+  
+  body() @driver.clock is only {
+    do req;
+  };
+};
+\end{lstlisting}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SystemVerilog Sequences}
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: deserializer for sequencer proxy},
+label={lst:SV_deserializer_sequence}]
+class uvc_pkg_simple_sequence_serializer extends uvm_ml::uvm_ml_class_serializer;
+  function void deserialize(inout uvm_pkg::uvm_object obj);
+    uvc_pkg::simple_seq inst;
+    $cast(inst, obj);
+    inst.field_1 = unpack_field_int(16);
+    ...
+  endfunction : deserialize
+endclass : uvc_pkg_simple_sequence_serializer
+
+function void register_uvc_pkg_simple_sequence_serializer();
+  uvc_okg_simple_sequence_serializer inst;
+  inst = new;
+  uvm_ml::register_class_serializer(inst, uvc_pkg::simple_seq::get_type());
+endfunction : register_uvc_pkg_simple_sequence_serializer
+
+register_uvc_pkg_simple_sequence_serializer();
+\end{lstlisting}
+
 \paragraph{UVM-SystemVerilog Sequences executing UVM-\textit{e} Sequences and Items}
 \subparagraph{Extending the UVM-\textit{e} Sequencer by a TLM Interface}
 \subparagraph{Creating an UVM-SystemVerilog Proxy Sequencer}
