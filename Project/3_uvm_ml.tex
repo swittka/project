@@ -989,7 +989,36 @@ extend MAIN uvc_sequence {|\label{line_e_disable_main}|
 };
 \end{lstlisting}
 \subparagraph{Creating an UVM-SystemVerilog Proxy Sequencer}
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: creating a proxy sequencer},
+label={lst:SV_proxy_sequencer}]
+class proxy_sequencer extends child_component_proxy;
+  ml_sequencer_proxy seqr_proxy;
+  //use uvm_component_uitls macro here and implement constructor
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    seqr_proxy = ml_sequencer_proxy::type_id::create("seqr_proxy", this);
+  endfunction : build_phase
+endclass : proxy_sequencer
 
+class env extends uvm_env;
+  proxy_sequencer proxy_seqr;
+  uvm_component e_seqr;
+  //use uvm_component_uitls macro here and implement constructor
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    e_seqr = uvm_ml_create_component("e", "sequencer", "e_seqr", this);
+    proxy_seqr = proxy_sequencer::type_id::create("proxy_seqr", this);
+  endfunction : build_phase
+  
+  function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    proxy_sequencer.connect_proxy({e_seqr.get_full_name(),".tlm_if."});
+  endfunction : connect_phase
+endclass : env
+\end{lstlisting}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequence Items}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequences}
 \subsection{Running a Multi-Language Environment with Incisive Enterprise Simulator}
