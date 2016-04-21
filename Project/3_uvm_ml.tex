@@ -979,7 +979,7 @@ extend ML_MASTER uvc_sequence {|\label{line_e_master_seq}|
   do_user_seq(p : ml_seq) @driver.clock is empty;
 };
 
-extend sequencer {||\label{line_e_inst_tlm_if}
+extend sequencer {|\label{line_e_inst_tlm_if}|
   tlm_if : ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) is instance;
     keep tlm_if.sequencer == me;
 };
