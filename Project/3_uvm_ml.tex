@@ -958,7 +958,36 @@ extend SIMPLE_SEQ master_sequence {|\label{line_e_extend_master_seq}|
 \end{lstlisting}
 Now the foreign UVM-\emph{SystemVerilog} sequences can be used like they were native UVM-\textit{e} sequences by executing the sequences, which extend the base sequence of the proxy sequencer and thereby act as proxy sequences.
 \paragraph{UVM-SystemVerilog Sequences executing UVM-\textit{e} Sequences and Items}
+Like all the other multi-language functionalities, sequence layering is not limited to UVM-\textit{e} sequences executing foreign UVM-\emph{SystemVerilog} sub-sequences, but can also be used with switched roles. This means, that UVM-\textit{e} sub-sequences are utilized within UVM-\emph{SystemVerilog} sequences. The same steps as mentioned previously are required to use multi-language sequence layering in this reversed configuration. 
 \subparagraph{Extending the UVM-\textit{e} Sequencer by a TLM Interface}
+Firstly the template for TLM inferfaces of UVM-\textit{e} sequencers has to be imported, which is located at:
+\smallskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/e/seqr_tlm_interface.e
+\end{lstlisting} 
+\smallskip
+Then a TLM interface is added to the UVM-\textit{e} sequencer (sequence driver) serving as the connection point between both frameworks (example~\ref{lst:e_sequencer_tlm_if}). Therefore the base sequence is extended to get a designated sequence dealing with the requests coming from UVM-SystemVerilog (line~\ref{line_e_master_seq}). It needs to contain an abstact method \lstinline$do_user_seq()$ and its only argument has to be of type \lstinline$ml_seq$ (this type is defined in the template file).
+After that this new sequence and the sequence item of the UVC are used to add a TLM interface to the sequencer by instanciating the above imported TLM interface template (line~\ref{line_e_inst_tlm_if}). Following a constraint is used to connect the TLM interface and sequencer, so that the TLM interface can execute sequence items on the sequencer.
+Additionally the \lstinline$MAIN$ sequence has to be disabled (line~\ref{line_e_disable_main}), so sequences are only started via the TLM interface.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: adding a TLM interface to the UVM-\textit{e} sequencer},
+label={lst:e_sequencer_tlm_if}]
+extend uvc_sequence_kind_t : [ML_MASTER];
+
+extend ML_MASTER uvc_sequence {|\label{line_e_master_seq}|
+  do_user_seq(p : ml_seq) @driver.clock is empty;
+};
+
+extend sequencer {||\label{line_e_inst_tlm_if}
+  tlm_if : ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) is instance;
+    keep tlm_if.sequencer == me;
+};
+
+extend MAIN uvc_sequence {|\label{line_e_disable_main}|
+  body() @driver.clock is only {};
+};
+\end{lstlisting}
 \subparagraph{Creating an UVM-SystemVerilog Proxy Sequencer}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequence Items}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequences}
