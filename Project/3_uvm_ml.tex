@@ -968,7 +968,7 @@ $UVM_ML_HOME/ml/primitives/sequence_layering/e/seqr_tlm_interface.e
 \end{lstlisting} 
 \smallskip
 Then a TLM interface is added to the UVM-\textit{e} sequencer (sequence driver) serving as the connection point between both frameworks (example~\ref{lst:e_sequencer_tlm_if}). Therefore the base sequence is extended to get a designated sequence dealing with the requests coming from UVM-SystemVerilog (line~\ref{line_e_master_seq}). It needs to contain an abstact method \lstinline$do_user_seq()$ and its only argument has to be of type \lstinline$ml_seq$ (this type is defined in the template file).
-After that this new sequence and the sequence item of the UVC are used to add a TLM interface to the sequencer by instanciating the above imported TLM interface template (line~\ref{line_e_inst_tlm_if}). Following a constraint is used to connect the TLM interface and sequencer, so that the TLM interface can execute sequence items on the sequencer.
+After that this new sequence and the sequence item of the UVC are used to add a TLM interface to the sequencer by instanciating the above imported TLM interface template (line~\ref{line_e_inst_tlm_if}). Following a constraint is used to connect the TLM interface and sequencer, so that sequence items and sequences can be executed over the TLM interface on the sequencer.
 Additionally the \lstinline$MAIN$ sequence has to be disabled (line~\ref{line_e_disable_main}), so sequences are only started via the TLM interface.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: adding a TLM interface to the UVM-\textit{e} sequencer},
@@ -989,6 +989,7 @@ extend MAIN uvc_sequence {|\label{line_e_disable_main}|
 };
 \end{lstlisting}
 \subparagraph{Creating an UVM-SystemVerilog Proxy Sequencer}
+
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequence Items}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequences}
 \subsection{Running a Multi-Language Environment with Incisive Enterprise Simulator}
