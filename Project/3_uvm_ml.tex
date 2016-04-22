@@ -989,19 +989,33 @@ extend MAIN uvc_sequence {|\label{line_e_disable_main}|
 };
 \end{lstlisting}
 \subparagraph{Creating an UVM-SystemVerilog Proxy Sequencer}
+On the other side of the TLM interface a proxy sequencer has to be created telling the foreign UVM-\textit{e} sequence driver, which sequence to execute. The UVM-ML package also provides a class for this proxy sequencer located at:
+\smallskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/sv/sequencer_proxy.sv
+\end{lstlisting} 
+\smallskip
+Example~\ref{lst:SV_proxy_sequencer} shows how to use this class to create a proxy sequencer for the UVM-SystemVerilog top level component. After including the file mentioned above, implement a class for the proxy sequencer by extending \lstinline$child_component_proxy$ (line~\ref{line_sv_class_proxy_sequencer}). Inside of this class, the provided proxy sequencer has to be instantiated (line~\ref{line_sv_define_sequencer_proxy}/\ref{line_sv_inst_sequencer_proxy}).\\
+
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: creating a proxy sequencer},
 label={lst:SV_proxy_sequencer}]
-class proxy_sequencer extends child_component_proxy;
-  ml_sequencer_proxy seqr_proxy;
+class proxy_sequencer extends child_component_proxy;|\label{line_sv_class_proxy_sequencer}|
+  ml_sequencer_proxy seqr_proxy;|\label{line_sv_define_sequencer_proxy}|
   //use uvm_component_uitls macro here and implement constructor
   
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    seqr_proxy = ml_sequencer_proxy::type_id::create("seqr_proxy", this);
+    seqr_proxy = ml_sequencer_proxy::type_id::create("seqr_proxy", this);|\label{line_sv_inst_sequencer_proxy}|
   endfunction : build_phase
 endclass : proxy_sequencer
-
+\end{lstlisting}
+After extending the UVM-\textit{e} sequence driver and implementing a proxy sequencer in UVM-SystemVerilog, the TLM interfaces of both components have to be connected. This is displayed in example~\ref{lst:SV_connect_proxy_sequencer}. Following to the instantiation of both components, their TLM interfaces are connected via the method \lstinline$connect_proxy()$ of the class \lstinline$ml_sequencer_proxy$ (line~\ref{line_sv_connect_tlm_proxy}). Its argument is the full name of the TLM interface inside of the UVM-\textit{e} sequence driver.\\
+The proxy sequencer class provided by UVM-ML cannot be instantiated directly in the environment, because additionally to the functionalities inherited from \lstinline$uvm_sequencer$ the multi-language ones from \lstinline$child_component_proxy$ are required (e.g. the framework indicator).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: connecting proxy sequencer and foreign sequencer},
+label={lst:SV_connect_proxy_sequencer}]
 class env extends uvm_env;
   proxy_sequencer proxy_seqr;
   uvm_component e_seqr;
@@ -1015,7 +1029,7 @@ class env extends uvm_env;
   
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
-    proxy_sequencer.connect_proxy({e_seqr.get_full_name(),".tlm_if."});
+    proxy_sequencer.connect_proxy({e_seqr.get_full_name(),".tlm_if."});|\label{line_sv_connect_tlm_proxy}|
   endfunction : connect_phase
 endclass : env
 \end{lstlisting}
