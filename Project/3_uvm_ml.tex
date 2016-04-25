@@ -959,7 +959,7 @@ extend SIMPLE_SEQ master_sequence {|\label{line_e_extend_master_seq}|
 Now the foreign UVM-\emph{SystemVerilog} sequences can be used like they were native UVM-\textit{e} sequences by executing the sequences, which extend the base sequence of the proxy sequencer and thereby act as proxy sequences.
 \paragraph{UVM-SystemVerilog Sequences executing UVM-\textit{e} Sequences and Items}
 Like all the other multi-language functionalities, sequence layering is not limited to UVM-\textit{e} sequences executing foreign UVM-\emph{SystemVerilog} sub-sequences, but can also be used with switched roles. This means, that UVM-\textit{e} sub-sequences are utilized within UVM-\emph{SystemVerilog} sequences. The same steps as mentioned previously are required to use multi-language sequence layering in this reversed configuration. 
-\subparagraph{Extending the UVM-\textit{e} Sequencer by a TLM Interface}
+\subparagraph{Extending the UVM-\textit{e} Sequencer by a TLM Interface}\label{e_seqr_tlm}
 Firstly the template for TLM inferfaces of UVM-\textit{e} sequencers has to be imported, which is located at:
 \smallskip
 \lstset{language={}, numbers=none, escapechar=|}
@@ -1034,7 +1034,55 @@ class env extends uvm_env;
 endclass : env
 \end{lstlisting}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequence Items}
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+The next step after connecting the TLM interfaces of the proxy sequencer and the foreign sequencer is to enable the proxy sequencer to execute sequence items of the UVM-\textit{e} sub-component. Therefore the TLM interface of the foreign sequencer has to be extended by a method called \lstinline$process_item()$ casting the  base sequence item to the proper type used in the sub-component, which is passed via the TLM port from the UVM-SystemVerilog component (example~\ref{lst:e_sequencer_tlm_if_process}). The resulting sequence item can either be identical to the one passed via the TLM interface or if necessary, be modified. For example, validate the correctness of the passed sequence item.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: processing the sequence item send from the UVM-SystemVerilog component},
+label={lst:e_sequencer_tlm_if_process}]
+extend ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) {
+    process_item(p : any_sequence_item) : packet is {
+        result = p.as_a(packet);
+    };
+};
+\end{lstlisting}
+Needless to say, that the sequence item processed at the foreign sequencer, first has to be generated at the proxy sequencer. Therefore a matching sequence item need to be implemented in UVM-SystemVerilog (see section \ref{type_mapping} for more information about type mapping). Following a sequence is created by extending \lstinline$uvm_sequence$ (example~\ref{lst:SV_sequence_item_seq}). This sequence has to contain a field of the previously implemented sequence item (line~\ref{line_sv_declare_packet}). By calling the UVM-SystemVerilog macro \lstinline$uvm_declare_p_sequencer()$ the sequence is connected to the proxy sequencer by specifying its type (line~\ref{line_sv_p_sequencer}). In the \lstinline$body()$ task of the sequence the transaction is created and send to the foreign sequencer using the \lstinline$`uvm_do()$ macro or comparable ones of UVM-SystemVerilog (line~\ref{line_sv_do_pkt}).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: connecting proxy sequencer and foreign sequencer},
+label={lst:SV_sequence_item_seq}]
+class sequence_item_seq extends uvm_sequence;
+  packet pkt;|\label{line_sv_declare_packet}|
+  `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_p_sequencer}|
+
+  virtual task body();
+    `uvm_do(pkt);|\label{line_sv_do_pkt}|
+  endtask  
+endclass : sequence_item_seq
+\end{lstlisting}
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequences}
+When executing an UVM-\textit{e} sequence from a UVM-SystemVerilog component it is essentially to create a struct serving as a proxy for the foreign sequence. This is based on the fact, that UVM-\textit{e} uses \lstinline$when$-subtypes to implement different sequences and UVM-SystemVerilog does not contain a equivalent construct modeling this. Therefore the proxy struct is used to represent an corresponding type for the inheritance of classes in UVM-SystemVerilog, so they can be used to execute UVM-\textit{e} sequences via the TLM interface.\\
+Example~\ref{lst:e_export_seq} shows how to utilize this proxy struct to start sequences in the foreign sub-component. Firstly a struct which inherits from the base struct \lstinline$ml_seq$ defined at the TLM interface template of the UVM-ML package is implemented for each sequence of the foreign UVC (line~\ref{line_e_proxy_seq}). Its name is the \lstinline$when$-subtype of the sequence and it contains all fields necessary to configure the corresponding sequence itself.\\
+After that, the sequence used to create the TLM interface of the sequence driver (see section~\ref{e_seqr_tlm}) is extended to contain the sequence to be executed (line~\ref{line_e_seq_inst}). Additionally the method \lstinline$do_user_seq()$ is extended (\ref{line_e_do_user_seq}). The different sequences are distinguished through the \lstinline$kind$ field of the proxy struct (line~\ref{line_e_seq_kind}). Eventually the individual sequence is created and started (line~\ref{line_e_do_seq}).
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: exporting the sequence},
+label={lst:e_export_seq}]
+struct SUB_TYPE_SEQ like ml_seq {|\label{line_e_proxy_seq}|
+    %field_1 : uint;
+    //...
+};
+
+extend ML_MASTER uvc_sequence {
+    !sub_type_seq : SUB_TYPE_SEQ uvc_sequence;|\label{line_e_seq_inst}|
+
+    do_user_seq(p : ml_seq) @ driver.clock is also {|\label{line_e_do_user_seq}|
+        if(p.kind == "SUB_TYPE_SEQ") {|\label{line_e_seq_kind}|
+            do sub_type_seq keeping {|\label{line_e_do_seq}|
+                .field_1 == p.as_a(SUB_TYPE_SEQ).field_1;
+                //...
+            };
+        };
+    };
+};
+\end{lstlisting}
 \subsection{Running a Multi-Language Environment with Incisive Enterprise Simulator}
 
 After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
