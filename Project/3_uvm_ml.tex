@@ -1040,9 +1040,9 @@ The next step after connecting the TLM interfaces of the proxy sequencer and the
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: processing the sequence item send from the UVM-SystemVerilog component},
 label={lst:e_sequencer_tlm_if_process}]
 extend ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) {
-    process_item(p : any_sequence_item) : packet is {
-        result = p.as_a(packet);
-    };
+  process_item(p : any_sequence_item) : packet is {
+    result = p.as_a(packet);
+  };
 };
 \end{lstlisting}
 Needless to say, that the sequence item processed at the foreign sequencer, first has to be generated at the proxy sequencer. Therefore a matching sequence item need to be implemented in UVM-SystemVerilog (see section \ref{type_mapping} for more information about type mapping). Following a sequence is created by extending \lstinline$uvm_sequence$ (example~\ref{lst:SV_sequence_item_seq}). This sequence has to contain a field of the previously implemented sequence item (line~\ref{line_sv_declare_packet}). By calling the UVM-SystemVerilog macro \lstinline$uvm_declare_p_sequencer()$ the sequence is connected to the proxy sequencer by specifying its type (line~\ref{line_sv_p_sequencer}). In the \lstinline$body()$ task of the sequence the transaction is created and send to the foreign sequencer using the \lstinline$`uvm_do()$ macro or comparable ones of UVM-SystemVerilog (line~\ref{line_sv_do_pkt}).
@@ -1061,27 +1061,84 @@ endclass : sequence_item_seq
 \subparagraph{UVM-SystemVerilog Do'ing UVM-\textit{e} Sequences}
 When executing an UVM-\textit{e} sequence from a UVM-SystemVerilog component it is essentially to create a struct serving as a proxy for the foreign sequence. This is based on the fact, that UVM-\textit{e} uses \lstinline$when$-subtypes to implement different sequences and UVM-SystemVerilog does not contain a equivalent construct modeling this. Therefore the proxy struct is used to represent an corresponding type for the inheritance of classes in UVM-SystemVerilog, so they can be used to execute UVM-\textit{e} sequences via the TLM interface.\\
 Example~\ref{lst:e_export_seq} shows how to utilize this proxy struct to start sequences in the foreign sub-component. Firstly a struct which inherits from the base struct \lstinline$ml_seq$ defined at the TLM interface template of the UVM-ML package is implemented for each sequence of the foreign UVC (line~\ref{line_e_proxy_seq}). Its name is the \lstinline$when$-subtype of the sequence and it contains all fields necessary to configure the corresponding sequence itself.\\
-After that, the sequence used to create the TLM interface of the sequence driver (see section~\ref{e_seqr_tlm}) is extended to contain the sequence to be executed (line~\ref{line_e_seq_inst}). Additionally the method \lstinline$do_user_seq()$ is extended (\ref{line_e_do_user_seq}). The different sequences are distinguished through the \lstinline$kind$ field of the proxy struct (line~\ref{line_e_seq_kind}). Eventually the individual sequence is created and started (line~\ref{line_e_do_seq}).
+After that, the sequence used to create the TLM interface of the sequence driver (see section~\ref{e_seqr_tlm}) is extended to contain the sequence to be executed (line~\ref{line_e_seq_inst}). Additionally the method \lstinline$do_user_seq()$ is extended (line~\ref{line_e_do_user_seq}). The different sequences are distinguished through the \lstinline$kind$ field of the proxy struct (line~\ref{line_e_seq_kind}). Eventually the individual sequence is created and started using the \lstinline$do$ action of UVM-\textit{e} (line~\ref{line_e_do_seq}).
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={\textit{e}: exporting the sequence},
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: executing the sequence received from the proxy sequencer},
 label={lst:e_export_seq}]
 struct SUB_TYPE_SEQ like ml_seq {|\label{line_e_proxy_seq}|
-    %field_1 : uint;
-    //...
+  %field_1 : uint;
+  //...
 };
 
 extend ML_MASTER uvc_sequence {
-    !sub_type_seq : SUB_TYPE_SEQ uvc_sequence;|\label{line_e_seq_inst}|
+  !sub_type_seq : SUB_TYPE_SEQ uvc_sequence;|\label{line_e_seq_inst}|
 
-    do_user_seq(p : ml_seq) @ driver.clock is also {|\label{line_e_do_user_seq}|
-        if(p.kind == "SUB_TYPE_SEQ") {|\label{line_e_seq_kind}|
-            do sub_type_seq keeping {|\label{line_e_do_seq}|
-                .field_1 == p.as_a(SUB_TYPE_SEQ).field_1;
-                //...
-            };
-        };
+  do_user_seq(p : ml_seq) @ driver.clock is also {|\label{line_e_do_user_seq}|
+    if(p.kind == "SUB_TYPE_SEQ") {|\label{line_e_seq_kind}|
+      do sub_type_seq keeping {|\label{line_e_do_seq}|
+        .field_1 == p.as_a(SUB_TYPE_SEQ).field_1;
+        //...
+      };
     };
+  };
 };
+\end{lstlisting}
+In the top level UVM-SystemVerilog component a sequence is initially defined (example~\ref{lst:SV_exporting_seq}) for each foreign sequence corresponding to the struct defined in example~\ref{lst:e_export_seq}, which will be used to start the foreign sequence via the TLM connection between proxy sequencer and foreign sequencer. It extends the sequence \lstinline$ml_seq$ (line~\ref{line_sv_extend_ml_seq}) defined in the base proxy sequencer provided by the UVM-ML package and contains all fields of the exported UVM-\textit{e} sequence (line~\ref{line_sv_seq_fields}). Additionaly the UVM-SystemVerilog macro \lstinline$`uvm_declare_p_sequencer()$ is used to set the associated proxy sequencer (line~\ref{line_sv_set_proxy}) and finally the field \lstinline$kind$ inherited from \lstinline$ml_seq$ is set inside of the constructor (line~\ref{line_sv_set_kind}). This field is used to identify the sequence to be started at the foreign sequencer.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: exporting the UVM-\textit{e} sequence},
+label={lst:SV_exporting_seq}]
+class SUB_TYPE_SEQ extends ml_seq;|\label{line_sv_extend_ml_seq}|
+  rand int unsigned field_1;|\label{line_sv_seq_fields}|
+  //...
+
+  `uvm_object_utils_begin(SUB_TYPE_SEQ)
+    `uvm_field_int(field_1, UVM_DEFAULT)
+  `uvm_object_utils_end
+  `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_set_proxy}|
+
+  function new(string name="SUB_TYPE_SEQ");
+    super.new(name);
+    kind = name;|\label{line_sv_set_kind}|
+  endfunction
+endclass : SUB_TYPE_SEQ
+\end{lstlisting}
+After that, the foreign UVM-\textit{e} sequence can be used like a native UVM-SystemVerilog sequence shown in example~\ref{lst:SV_execute_seq}. The sequence in this example contains the proxy sequence (line~\ref{line_sv_declare_exp_seq}) defined in the previous example. After the associate sequencer is declared (line~\ref{line_sv_set_proxy_seqr}) the foreign sequence is started in the \lstinline$body()$ task (line~\ref{line_sv_do_seq})\\
+More detailed, the execution of the proxy sequence causes the proxy sequencer to transmit it via the TLM connection. At the foreign sequencer the received struct is used to configure the corresponding UVM-\textit{e} sequence and causes its execution.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: executing the exported UVM-\textit{e} sequence},
+label={lst:SV_execute_seq}]
+class simple_seq extends uvm_sequence;|\label{line_sv_class_start_exp_seq}|
+  SUB_TYPE_SEQ exported_seq;|\label{line_sv_declare_exp_seq}|
+
+  `uvm_object_utils(simple_seq)
+  `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_set_proxy_seqr}|
+
+  virtual task body();
+    `uvm_do(simple_seq);|\label{line_sv_do_seq}|
+  endtask
+endclass : simple_seq
+\end{lstlisting}
+\subsection{End of Test Synchronization}
+At the moment UVM-ML does not provide any synchronization between frameworks to ensure the correct ending of a test. This means, if a framework reaches the end of the test, but another framework would need to execute additional code in its \lstinline$run$ phase, the first framework could preemtively terminate the whole test and thereby prevent the other frameworks from finishing the test properly.\\
+Until end of test synchronization is added to UVM-ML, it is recommended to exchange the status of objections manually. In doing so, the UVM-SystemVerilog framwork contains the master component ending the test, when all other slave components have dropped their objections. Example~\ref{lst:SV_sync_test_end} shows the implementation of the master component. The communication between master and slave components is established via a \lstinline$reg$ variable connected to a simple port in the UVM-\textit{e} component. Therefore a module is created containing this \lstinline$reg$ variable (line~\ref{line_sv_reg_sync}). In the \lstinline$run$ phase of the testbench the master raises its objection (line~\ref{line_sv_raise_obj}) and then waits for the slave component to drop its objections (line~\ref{line_sv_wait_e_obj}). Only after all objections at the slave component are dropped, the master drops its own objection (line~\ref{line_sv_drop_obj}) and the whole test can be stopped safely.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: ending the test when UVM-\textit{e} components are ready},
+label={lst:SV_sync_test_end}]
+module topmodule;|\label{line_sv_reg_sync}|
+  reg e_objections_dropped;
+};
+
+class tb extends uvm_test;
+  task run_phase(uvm_phase phase);
+    phase.raise_objection(this);|\label{line_sv_raise_obj}|
+    wait_for_e_end_of_test();
+  endtask : run_phase
+  
+  task wait_for_e_end_of_test();
+    @topmodule.e_objections_dropped;|\label{line_sv_wait_e_obj}|
+    uvm_test_done.drop_objection(this);|\label{line_sv_drop_obj}|
+  endtask
+endclass : tb
 \end{lstlisting}
 \subsection{Running a Multi-Language Environment with Incisive Enterprise Simulator}
 
