@@ -1,24 +1,24 @@
 \section{Introduction}\label{introduction}
 When designing an \emph{application-specific integrated circuit (ASIC)} it is
 necessary to divide it into logical units called modules, so its complexity is
-reduced to multiple manageable problems. Considering this it is obvious to use the same
+reduced to multiple manageable problems. Considering this, it is obvious to use the same
 strategy when designing the verification environment of this chip. A commonly
-used approach to get such a hierarchical test bench is to use the \emph{Univeral
-Verification Methodology (UVM)} to divide the test bench into reusable
+used approach to get such a hierarchical testbench is to use the \emph{Univeral
+Verification Methodology (UVM)} to divide the testbench into reusable
 subcomponents. The resulting units are called \emph{Universal Verification
-Components (UVCs)}. Such test benches are written in special verification
-languages like \emph{Systemverilog}, \emph{e} or \emph{SystemC}.\\
+Components (UVCs)}. Such testbenches are written in special verification
+languages like \emph{SystemVerilog}, \emph{e} or \emph{SystemC}.\\
 Because the structure of an UVC supports reusability, it is typical that an UVC
 is utilized again when its corresponding module is reused in another design. Now
 it can occur that the test bench for the new design uses another verification
 language than the reused UVC. In this case the previous created UVC cannot be
-used and must be rewritten in the verification language of the new test bench.
-This means that additional time is needed to implement and test the UVC, which
+used and must be rewritten in the verification language of the new testbench.
+This means, that additional time is needed to implement and test the UVC, which
 actually already existed, just in another verification language. Therefore it
-would be preferable to build a test bench consisting of UVCs regardless of the
+would be preferable to build a testbench consisting of UVCs regardless of the
 verification language they are implemented in.\\
 This is the idea behind  \emph{Universal Verification Language
-Multi-Language (UVM-ML)}. It is an open source solution to integrate
+Multi-Language (UVM-ML)}. It is an open source solution to combine
 verification components written in different languages into a single
 environment and its features are introduced in this paper.
 

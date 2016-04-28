@@ -23,32 +23,32 @@ structure of these components inside a UVM testbench is shown in figure
 
 \subsubsection{Interface UVC}\label{interface_uvc}
 
-For each interface of an \emph{device under test (DUT)} an interface UVC needs
+For each interface of an \emph{device under test (DUT)} an interface UVC has
 to be created. Its purpose is to establish the communication between
 the testbench and the signals of the DUT. More than one interface UVC can be
 connected to the DUT. Its standard architecture contains the following elements:
 
 \begin{itemize}
-  \item \textbf{Data item}\\
-  Data items represent stimulus for an interface of the
+  \item \textbf{Sequence item}\\
+  Sequence items represent stimulus for an interface of the
   DUT or can be extracted from it for observation.
-  The fields of a data item are derived from the attributes of the transaction
+  The fields of a sequence item are derived from the attributes of the transaction
   to create an object in a higher level of abstraction than the signals of the
   DUT themselves.
   \item \textbf{Sequencer/Sequence Driver}\\
-  The sequencer in \emph{UVM-SystemVerilog (UVM-SV)} respectively the sequence
-  driver in \emph{UVM-e} is a stimulus generator, which creates random
+  The sequencer in \emph{UVM-SystemVerilog} (UVM-SV) respectively the sequence
+  driver in UVM-\textit{e} is a stimulus generator, which creates random
   stimulus by executing sequences. These sequences either generate one or more
-  data items or other sequences.
+  sequence items or other sequences.
   \item \textbf{Driver/Bus Functional Model (BFM)}\\
-  The driver in \emph{UVM-SV} respectively BFM in \emph{UVM-e} receives a data
+  The driver in UVM-SV respectively BFM in UVM-\textit{e} receives a sequence
   item from a sequencer or sequence driver. Then the extracted attributes are
   used to drive the signals of the DUT. So the active functionalities of an
   interface UVC are split between the transaction-level sequencer or sequence
   driver and the signal-level driver or BFM.
   \item \textbf{Monitor}\\
   The monitor basically inverts the functionality of a driver or BFM. It samples
-  the signal of the DUT and generates data items. Additionally it collects coverage
+  the signal of the DUT and generates sequence items. Additionally it collects coverage
   and performs checking. The monitor is a passive entity and does not drive any
   signals of the DUT.
   \item \textbf{Collector} (optional)\\
