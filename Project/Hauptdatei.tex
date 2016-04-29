@@ -111,7 +111,7 @@
 \AtBeginDocument{
 \counterwithin{lstlisting}{section}
 }
-
+\setlength{\emergencystretch}{2pt}
 % Indexerstellung
 \makeindex
 
@@ -290,6 +290,7 @@
 % Literaturverzeichnis anzeigen
 \renewcommand\refname{Literaturverzeichnis}
 \bibliography{Hauptdatei}
+\bibliographystyle{ieeetr}
 
 %% Index soll Stichwortverzeichnis heissen
 % \newpage
@@ -310,5 +311,5 @@
 %\newpage
 %\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
 %\section*{ }
-\listoftodos
+
 \end{document}

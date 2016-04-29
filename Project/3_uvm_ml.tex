@@ -1,9 +1,4 @@
 \section{Universal Verification Methodology Multi-Language}\label{uvm_ml}
-\todo[inline]{all emph are set for names}
-\todo[inline]{textit for e}
-\todo[inline]{nice layout}
-\todo[inline]{do not mix framework and verification language}
-\todo[inline]{abbreviations introduced only once}
 Verification projects consist of ready to use verification components, which are joined in a testbench. These components
 are often implemented in different verification languages like SystemVerilog, \textit{e} or SystemC. For
 example, when verification projects are normally implemented in \textit{e}, but some components are intellectual
@@ -18,7 +13,7 @@ This paper focuses on the two verification languages SystemVerilog and \textit{e
 Verification Methodology} to show the capabilities provided by UVM-ML. The simulator used for this is the
 \emph{Incisive Enterprise Simulator} developed by \emph{Cadence Design Systems, Inc.}\\
 The key concepts, which provide these capabilities are described in the following section. After that it is shown how to
-integrate multi-language functionalities into \emph{Incisive Enterprise Simulator}. Followed by the illustration on how
+integrate multi-language functionalities into \emph{Incisive Enterprise Simulator} (IES). Followed by the illustration on how
 to use it to create an multi-language environment, configure its sub-components and enable data communication between
 components. Finally it is declared how to start a test in this environment.
 
@@ -55,8 +50,7 @@ which are provided by the UVM-ML package, but it can be extended to support othe
 
 \subsection{Integrate Multi-Language Functionality into Incisive Enterprise
 Simulator}
-At the current state of work multi-language support can be integrated into Cadence Incisive Enterprise Simulator (IES)
-via an open source package provided by Accellera Systems Initiative and developed jointly by AMD and Cadence Design
+At the current state of work multi-language support can be integrated into Cadence Incisive Enterprise Simulator via an open source package provided by Accellera Systems Initiative and developed jointly by AMD and Cadence Design
 Systems. This package is called \emph{UVM-ML Open Architecture} and is provided as download on the Accellera website.
 For this paper version 1.5.1 of the package was used. After downloading and extracting, it can be
 installed via the provided install script called \lstinline$install_ies.csh$ and the following steps using \emph{C shell}:
@@ -150,7 +144,7 @@ class like configuring the sub-component (see section~\ref{ml_config}) or data
 communication via TLM interfaces (see section~\ref{ml_tlm}).
 \medskip
 \lstset{language={SystemVerilog}, numbers=left, escapechar=|}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: extended component}, label={lst:SV_unified_sub}]
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: extended multi-language component}, label={lst:SV_unified_sub}]
 import uvm_pkg::*;					|\label{line_uvm_package}|
 `include "uvm_macros.svh"			|\label{line_uvm_macros}|
 import uvm_ml::*;					|\label{line_uvm_ml_package}|
@@ -369,31 +363,32 @@ provides a more convenient option to configure user defined data types.
 When data is passed from an UVM-\textit{e} unit to an UVM-SV component,
 the UVM-\textit{e} unit needs to constrain \lstinline$uvm_config_set()$ as shown in example~\ref{lst:e_set_int}
 line~\ref{line_e_set_int}. In this example the value \lstinline$16'h7fff$ is assigned to the variable
-\lstinline$slave0_max$ in all components, which contain the letters \lstinline$ubus_env$ in their full path.
+\lstinline$field_1$ in all components, which contain the letters \lstinline$uvc_env$ in their full path.
 
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: register an integer in configuration database},
 label={lst:e_set_int}]
 extend testbench {
-    keep uvm_config_set("*ubus_env*", "slave0_max", 16'h7fff);|\label{line_e_set_int}|
+    keep uvm_config_set("*uvc_env*", "field_1", 16'h7fff);|\label{line_e_set_int}|
 };
 \end{lstlisting}
 
 After the configuration is set in the database by the UVM-\textit{e} unit, the UVM-SV component needs to get
 the value from its database. When it is an primitive data type like an integer as in example~\ref{lst:SV_get_int},
 the corresponding \lstinline$uvm_config_*::get()$ method should be used as shown in line~\ref{line_sv_get_int}. Here the
-value of \lstinline$slave0_max$ registered for this component in the database is assigned to the variable with the same
-name, \lstinline$slave0_max$.\\
+value of \lstinline$field_1$ registered for this component in the database is assigned to the variable with the same
+name, \lstinline$field_1$.\\
 When the field was specified with the corresponding \lstinline$uvm_field_*$ macro, calling
 \lstinline$uvm_config_*::get()$ is not required. Its value is automatically retrieved from the configuration database.
 
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting an integer from configuration database},
 label={lst:SV_get_int}]
-class ml_ubus_env extends ubus_env;
-  int slave0_max;|\label{line_sv_declare_int}|
+class ml_uvc_env extends uvc_env;
+  int field_1;|\label{line_sv_declare_int}|
   function void end_of_elaboration_phase(uvm_phase phase);
-    void'(uvm_config_int::get(this, "", "slave0_max", slave0_max));|\label{line_sv_get_int}|
+  	super.end_of_elaboration_phase(phase);
+    void'(uvm_config_int::get(this, "", "field_1", field_1));|\label{line_sv_get_int}|
   endfunction : end_of_elaboration_phase
 endclass
 \end{lstlisting}
@@ -491,15 +486,15 @@ line~\ref{line_sv_comp_int}.
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an integer in configuration database},
 label={lst:SV_set_int}]
-class sys_env extends uvm_env;
-  uvm_component xbus_e_uvc;
+class uvc_env extends uvm_env;
+  uvm_component e_uvc;
   
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    uvm_config_int::set(this,"*xbus_config_u*","min_addr", 10);|\label{line_sv_set_int}|
-    xbus_e_uvc = uvm_ml_create_component("e", "xbus_env_u", "xbus_e_uvc", this);|\label{line_sv_comp_int}|
+    uvm_config_int::set(this,"*e_uvc*","field_1", 10);|\label{line_sv_set_int}|
+    e_uvc = uvm_ml_create_component("e", "uvc_env_u", "e_uvc", this);|\label{line_sv_comp_int}|
   endfunction : build_phase
-endclass : sys_env
+endclass : uvc_env
 \end{lstlisting}
 
 Once the field is registered in the configuration database, the UVM-\textit{e} unit just needs to constrain
@@ -508,9 +503,9 @@ be used inside of the unit.
 
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={e: getting an integer from configuration database}, label={lst:e_get_int}]
-unit xbus_config_u {
-  min_addr : xbus_addr_t;
-  keep soft uvm_config_get(min_addr); |\label{line_e_get_int}|
+unit uvc_env_u {
+  field_1 : int;
+  keep soft uvm_config_get(field_1); |\label{line_e_get_int}|
 };
 \end{lstlisting}
 \paragraph{Configuring UVM-\textit{e} Units using Objects}
@@ -538,7 +533,7 @@ endclass
 
 class test extends uvm_env;
   uvm_component my_e_child; 
-  data conf_data;|\label{line_sv_declare_data}|
+  data conf_data;|\label{line_sv_declare_data_2}|
   
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
@@ -580,14 +575,14 @@ When a UVM-SV interface UVC is instantiated inside of an UVM-e component, the vi
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: configuring the UVM-SV interface},
 label={lst:SV_config_interface}]
 module tb;
-  uvc_if if(...);
+  uvc_if inf(...);
 	
   function bit set_vif(virtual uvc_if vif);|\label{line_sv_function_vif}|
     uvm_config_db#(virtual uvc_if)::set(null,"sys.sv_uvc*","vif",vif);|\label{line_sv_set_db_vif}|
     return 1;
   endfunction
 
-  bit res = set_vif(if);|\label{line_sv_call_function_vif}|
+  bit res = set_vif(inf);|\label{line_sv_call_function_vif}|
 endmodule : tb
 \end{lstlisting}
 \paragraph{Configuring the UVM-\textit{e} Signal Map}
@@ -598,7 +593,7 @@ Finally the foreign interface UVC containing the signal map is instantiated in l
 label={lst:SV_set_smp}]
 class tb extends uvm_env;
   uvm_component e_uvc;
-  //use uvm_component_uitls macro here and implement the constructor
+  //use uvm_component_utils macro here and implement the constructor
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
@@ -608,7 +603,7 @@ class tb extends uvm_env;
     //...
     e_uvc = uvm_ml_create_component("e", "uvc_env_u", "e_uvc", this);|\label{line_sv_create_smp}|
   endfunction : build_phase
-endclass : htax_tb
+endclass : tb
 \end{lstlisting}
 The next step in connecting the signal map of the interface UVC is to obtain the previously registered entries from the configuration database. The definition of the signal map of the interface UVC is displayed in example~\ref{lst:e_get_smp} line~\ref{line_e_smp}. Again it contains only a single examplary simple port. After that, the extended signal map is shown using the configuration database to connect the simple port to the DUT. Firstly a string is created for each simple port to store the path obtained from the database (line~\ref{line_e_declare_path_string}). After that the database is accessed to get the \lstinline$hdl_path()$ and \lstinline$agent()$ of the top level module of the DUT (line~\ref{line_e_get_smp_path}/\ref{line_e_get_smp_agent}). Eventually the \lstinline$hdl_path()$ of the simple port is obtained (line~\ref{line_e_get_port_string}) and constrained (line~\ref{line_e_set_port}). The full path is then automatically composed of the \lstinline$hdl_path()$ of the signal map and simple port.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
@@ -730,7 +725,7 @@ extend sys {
   
     
   connect_ports() is also {
-    uvm_connect_names("sys.monitor.outport", append(sv_mod_monitor.e_path(), ".in_port"));|\label{line_e_connect}|
+    uvm_connect_names("sys.e_inf_monitor.outport", append(sv_mod_monitor.e_path(), ".in_port"));|\label{line_e_connect}|
   };  
 };
 \end{lstlisting}
@@ -753,7 +748,7 @@ unit mod_monitor like uvm_monitor {
 \end{lstlisting}
 The producer is shown in example~\ref{lst:SV_TLM_producer}. Its TLM port is declared in line~\ref{line_sv_port_declare}
 and instantiated in line~\ref{line_sv_port_inst}. After that it is registered at the framework adapter in
-line~\ref{line_sv_port_reg}. Finally both ports are connected in line~\ref{line_sv_con}.
+line~\ref{line_sv_port_reg}. Finally both monitors are instantiated (line~\ref{line_sv_inst_monitors}) and their ports are connected (line~\ref{line_sv_con}).
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: producer side of an TLM connection},
 label={lst:SV_TLM_producer}]
@@ -780,7 +775,7 @@ class env extends uvm_env;
   
   `uvm_component_utils(env)
   
-  function void build_phase(uvm_phase phase);
+  function void build_phase(uvm_phase phase);|\label{line_sv_inst_monitors}|
     super.build_phase(phase);
     sv_inf_monitor = inf_monitor::type_id::create("sv_inf_monitor", this);
     e_mod_monitor  = uvm_ml_create_component("e", "mod_monitor", "e_mod_monitor", this); 
@@ -818,7 +813,7 @@ class ml_uvc_env extends uvc_env;
     uvm_object_wrapper seq_wrap;
     super.build_phase(phase);
     void'(uvm_config_string::get(this, "", "seq_name", seq_name));|\label{line_sv_get_seq_name}|
-    seq_wrap = factory.find_by_name(slave_seq_name);|\label{line_sv_find_seq_by_name}|
+    seq_wrap = factory.find_by_name(seq_name);|\label{line_sv_find_seq_by_name}|
     uvm_config_db#(uvm_object_wrapper)::set(this, "agent.sequencer.run_phase", "default_sequence", seq_wrap);|\label{line_sv_set_default_seq}|
     endfunction
 endclass : ml_uvc_env
@@ -850,7 +845,7 @@ extend MAIN uvc_sequence {
 \end{lstlisting}
 Finally the name of the sequence, which should be started, has to be registered in the configuration database by the top level UVM-SV component (example~\ref{lst:SV_set_main_sequence}). This is done in line~\ref{line_sv_set_main_seq}, where the name of the sequence is registered for all sub-components, which end with the string \emph{'driver'}.
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: setting the default sequence via configuration database},
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: setting the \lstinline$main$ sequence via configuration database},
 label={lst:SV_set_main_sequence}]
 class svtop extends uvm_test;
   function void build_phase(uvm_phase phase);
@@ -875,7 +870,7 @@ In example~\ref{lst:SV_sequencer_tlm_if} it is shown how to utilize this templat
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: creating the TLM interface for the sequencer},
 label={lst:SV_sequencer_tlm_if}]
 class sequencer_tlm_if extends ml_seqr_tlm_if#(packet, base_sequence);|\label{line_sv_extend_tlm_if}|
-  //use uvm_component_uitls macro here and implement the constructor
+  //use uvm_component_utils macro here and implement the constructor
 
   function uvm_sequence_item set_fields(uvm_sequence_item item);|\label{line_sv_set_fields}|
     packet pkt;   
@@ -893,7 +888,7 @@ After the TLM interface is implemented, it has to be integrated into the sequenc
 label={lst:SV_sequencer_tlm}]
 class ml_sequencer extends sequencer;
     sequencer_tlm_if seqr_tlm_if;|\label{line_sv_declare_sequencer_tlm}|
-    //use uvm_component_uitls macro here and implement the constructor
+    //use uvm_component_utils macro here and implement the constructor
 
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
@@ -978,10 +973,11 @@ extend_SINGLE_ITEM master_sequence {
 };
 \end{lstlisting}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SV Sequences}
-When executing UVM-SV sequences via an UVM-\textit{e} proxy sequencer a sequence item is transmitted from the proxy to the foreign sequencer. This sequence item contains all fields necessary to configure the sequence on the UVM-SV side. Because these information are send as an serialized bitstream, they need to be extracted before they can be used. For this purpose a deserializer is created for each sequence and registered at the multi-language adapter. This is displayed in example~\ref{lst:SV_deserializer_sequence} below. Firstly the deserializer is implemented by extending the base class \lstinline$uvm_ml::uvm_ml_class_serializer$ in line~\ref{line_sv_extend_serializer}. Inside of this class the actual deserializer method is created (line~\ref{line_sv_deserialize}). Its argument is initially cast to the type of the sequence and after that each field of the sequence is extracted from the bitstream exemplarily shown in line~\ref{line_sv_unpack_int} for an integer field.\\
+When executing UVM-SV sequences via an UVM-\textit{e} proxy sequencer a sequence item is transmitted from the proxy to the foreign sequencer. This sequence item contains all fields necessary to configure the sequence on the UVM-SV side. Because these information are send as an serialized bitstream, they need to be extracted before they can be used.\\
+For this purpose a deserializer is created for each sequence and registered at the multi-language adapter. This is displayed in example~\ref{lst:SV_deserializer_sequence} below. Firstly the deserializer is implemented by extending the base class \lstinline$uvm_ml::uvm_ml_class_serializer$ in line~\ref{line_sv_extend_serializer}. Inside of this class the actual deserializer method is created (line~\ref{line_sv_deserialize}). Its argument is initially cast to the type of the sequence and after that each field of the sequence is extracted from the bitstream exemplarily shown in line~\ref{line_sv_unpack_int} for an integer field.
 Eventually the prior implemented deserializer is registered at the multi-language adapter of UVM-SV by creating a function (line~\ref{line_sv_register_function}) calling the UVM-ML method \lstinline$uvm_ml::register_class_serializer()$, which gets an object of the previously implemented deserializer class and the type of the sequence passed (line~\ref{line_sv_ml_register}). After that, this function is called in line~\ref{line_sv_call_function_register} to register the deserializer at the multi-language adapter.
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: deserializer for sequencer proxy},
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: deserializer for foreign sequences},
 label={lst:SV_deserializer_sequence}]
 class uvc_pkg_simple_sequence_serializer extends uvm_ml::uvm_ml_class_serializer;|\label{line_sv_extend_serializer}|
   function void deserialize(inout uvm_pkg::uvm_object obj);|\label{line_sv_deserialize}|
@@ -993,7 +989,7 @@ class uvc_pkg_simple_sequence_serializer extends uvm_ml::uvm_ml_class_serializer
 endclass : uvc_pkg_simple_sequence_serializer
 
 function void register_uvc_pkg_simple_sequence_serializer();|\label{line_sv_register_function}|
-  uvc_okg_simple_sequence_serializer inst;
+  uvc_pkg_simple_sequence_serializer inst;
   inst = new;
   uvm_ml::register_class_serializer(inst, uvc_pkg::simple_seq::get_type());|\label{line_sv_ml_register}|
 endfunction : register_uvc_pkg_simple_sequence_serializer
@@ -1034,7 +1030,7 @@ Additionally the \lstinline$MAIN$ sequence has to be disabled (line~\ref{line_e_
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: adding a TLM interface to the UVM-\textit{e} sequencer},
 label={lst:e_sequencer_tlm_if}]
-extend uvc_sequence_kind_t : [ML_MASTER];
+extend uvc_sequence_kind : [ML_MASTER];
 
 extend ML_MASTER uvc_sequence {|\label{line_e_master_seq}|
   do_user_seq(p : ml_seq) @driver.clock is empty;
@@ -1064,7 +1060,7 @@ Example~\ref{lst:SV_proxy_sequencer} shows how to use this class to create a pro
 label={lst:SV_proxy_sequencer}]
 class proxy_sequencer extends child_component_proxy;|\label{line_sv_class_proxy_sequencer}|
   ml_sequencer_proxy seqr_proxy;|\label{line_sv_define_sequencer_proxy}|
-  //use uvm_component_uitls macro here and implement the constructor
+  //use uvm_component_utils macro here and implement the constructor
   
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
@@ -1080,7 +1076,7 @@ label={lst:SV_connect_proxy_sequencer}]
 class env extends uvm_env;
   proxy_sequencer proxy_seqr;
   uvm_component e_seqr;
-  //use uvm_component_uitls macro here and implement the constructor
+  //use uvm_component_utils macro here and implement the constructor
   
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
@@ -1108,7 +1104,7 @@ extend ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) {
 \end{lstlisting}
 Needless to say, that the sequence item processed at the foreign sequencer, first has to be generated at the proxy sequencer. Therefore a matching sequence item need to be implemented in UVM-SV (see section \ref{type_mapping} for more information about type mapping). Following a sequence is created by extending \lstinline$uvm_sequence$ (example~\ref{lst:SV_sequence_item_seq}). This sequence has to contain a field of the previously implemented sequence item (line~\ref{line_sv_declare_packet}). By calling the UVM-SV macro \lstinline$uvm_declare_p_sequencer()$ the sequence is connected to the proxy sequencer by specifying its type (line~\ref{line_sv_p_sequencer}). In the \lstinline$body()$ task of the sequence the transaction is created and send to the foreign sequencer using the \lstinline$`uvm_do()$ macro or comparable ones of UVM-SV (line~\ref{line_sv_do_pkt}).
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: connecting proxy sequencer and foreign sequencer},
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: sending an UVM-\textit{e} sequence item  from  an UVM-SV sequence},
 label={lst:SV_sequence_item_seq}]
 class sequence_item_seq extends uvm_sequence;
   packet pkt;|\label{line_sv_declare_packet}|
@@ -1175,7 +1171,7 @@ class simple_seq extends uvm_sequence;|\label{line_sv_class_start_exp_seq}|
   `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_set_proxy_seqr}|
 
   virtual task body();
-    `uvm_do(simple_seq);|\label{line_sv_do_seq}|
+    `uvm_do(exported_seq);|\label{line_sv_do_seq}|
   endtask
 endclass : simple_seq
 \end{lstlisting}
@@ -1220,7 +1216,7 @@ extend sys {
 \subsection{Running a Test in a Multi-Language Environment with Incisive Enterprise Simulator}
 
 After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
-this with Incisive Enterprise Simulator (IES) provided by Cadence Design Systems Inc. Also a task of the
+this with Incisive Enterprise Simulator provided by Cadence Design Systems Inc. Also a task of the
 UVM-SV adapter is presented for this purpose, which provides an alternative option for running a test.
 
 \subsubsection{Setup IES for UVM-ML Mode}
