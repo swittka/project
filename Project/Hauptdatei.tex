@@ -277,6 +277,7 @@
 
 \include{4_conclusion}
 
+
 %\include{5_future_work}
 
 %\include{beispiel}
@@ -285,13 +286,13 @@
 % einfacher Zeilenabstand
 \singlespacing
 % Literaturliste soll im Inhaltsverzeichnis auftauchen
+\addcontentsline{toc}{section}{References}
 \newpage
-\addcontentsline{toc}{section}{Literaturverzeichnis}
-% Literaturverzeichnis anzeigen
-\renewcommand\refname{Literaturverzeichnis}
-\bibliography{Hauptdatei}
-\bibliographystyle{ieeetr}
 
+% Literaturverzeichnis anzeigen
+%\renewcommand\refname{References}
+\bibliography{Hauptdatei}
+%\bibliographystyle{ieeetr}
 %% Index soll Stichwortverzeichnis heissen
 % \newpage
 % % Stichwortverzeichnis soll im Inhaltsverzeichnis auftauchen
