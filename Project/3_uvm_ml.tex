@@ -5,16 +5,16 @@ example, when verification projects are normally implemented in \textit{e}, but 
 property and provide UVCs implemented in SystemVerilog. This leads to the demand of re-implementing fully
 operative code just to switch the verification language.\\
 Such a time consuming approach to this problem can be avoided by using the \emph{Universal Verification Methodology
-Multi-Language} (UVM-ML) package developed in cooperation of Advanced Micro Devices, Inc. (AMD) and Cadence Design
+Multi-Language} (UVM-ML) \cite{uvm_ml_user} package developed in cooperation of Advanced Micro Devices, Inc. (AMD) and Cadence Design
 Systems, Inc. It is based on the \emph{Universal Verification Methodology} and extends it multi-language
 functionalities. These enable the joined use of components implemented in different verification languages to build a
 single testbench with minimal changes of the reused components.\\
-This paper focuses on the two verification languages SystemVerilog and \textit{e} both using the \emph{Universal
+This report focuses on the two verification languages SystemVerilog and \textit{e} both using the \emph{Universal
 Verification Methodology} to show the capabilities provided by UVM-ML. The simulator used for this is the
 \emph{Incisive Enterprise Simulator} developed by \emph{Cadence Design Systems, Inc.}\\
 The key concepts, which provide these capabilities are described in the following section. After that it is shown how to
 integrate multi-language functionalities into \emph{Incisive Enterprise Simulator} (IES). Followed by the illustration on how
-to use it to create an multi-language environment, configure its sub-components and enable data communication between
+to use it to create a multi-language environment, configure its sub-components and enable data communication between
 components. Finally it is declared how to start a test in this environment.
 
 \subsection{Key concepts of UVM-ML}
@@ -51,8 +51,8 @@ which are provided by the UVM-ML package, but it can be extended to support othe
 \subsection{Integrate Multi-Language Functionality into Incisive Enterprise
 Simulator}
 At the current state of work multi-language support can be integrated into Cadence Incisive Enterprise Simulator via an open source package provided by Accellera Systems Initiative and developed jointly by AMD and Cadence Design
-Systems. This package is called \emph{UVM-ML Open Architecture} and is provided as download on the Accellera website.
-For this paper version 1.5.1 of the package was used. After downloading and extracting, it can be
+Systems. This package is called \emph{UVM-ML Open Architecture} and is provided as download on the Accellera website \cite{uvm_ml}.
+For this report version 1.5.1 of the package was used. After downloading and extracting, it can be
 installed via the provided install script called \lstinline$install_ies.csh$ and the following steps using \emph{C shell}:
 
 \medskip
@@ -80,7 +80,7 @@ Due to some problems with the installation on \emph{Ubuntu} it is recommended to
 package, which is \lstinline$UVM_ML-1.5.1$ for version 1.5.1. When already using IES, the standard setup script can be used
 instead of manually setting the path environment variable to the \emph{irun} installation. While sourcing
 \lstinline$install_ies.csh$ additional options can be used to control it. To install the environment on a 64 bit machine
-instead of an 32 bit one use \lstinline$--64bit$. If only the adapters for UVM-SV, UVM-SystemC and
+instead of a 32 bit one use \lstinline$--64bit$. If only the adapters for UVM-SV, UVM-SystemC and
 UVM-\textit{e} are required, UVM-ML can be build without the ASI-SystemC adapter via \lstinline$--no_osci$.\\
 After this installation UVM-ML enables the creation of multi-language environments as well as running tests, which is
 discussed in the following sections.
@@ -94,7 +94,7 @@ of an interface UVC implemented in UVM-SV and a module UVC in
 UVM-\textit{e}. \\
 When planing to create such a multi-language environment, there
 are two possible approaches supported by UVM-ML to achieve this goal. Firstly an
-\emph{unified hierarchy} can be created or alternatively an \emph{side-by-side}
+\emph{unified hierarchy} can be created or alternatively a \emph{side-by-side}
 environment. In an \emph{unified hierarchy} a child component implemented in one
 verification language is instantiated from a parent component in another
 verification language. In contrast, when creating a \emph{side-by-side} architecture,
@@ -109,7 +109,7 @@ corresponding component in the other verification language. This gives the
 opportunity to use some of benefits of UVM-ML. It is possible to use a predefined
 phasing in this environment, where phases like \lstinline$build$, \lstinline$connect$ or \lstinline$run$ are
 performed depth-first to ensure that dependencies between the components of
-different frameworks are resolved in the right way. Also sub-components can be
+different frameworks are resolved in the right way \cite{uvm_ml_ref}. Also sub-components can be
 configured which increases the reusability of the environment, because when the
 environment is included in some other environment, only the top component needs
 to be configured and all sub-components are configured automatically. As a result of
@@ -158,7 +158,7 @@ endclass : ml_uvc_env
 \end{lstlisting}
 \medskip
 Corresponding to the extensions in the UVM-SV component the UVM-\textit{e}
-unit needs to include an proxy unit for the foreign component (see example~\ref{lst:e_unified_top}).
+unit needs to include a proxy unit for the foreign component (see example~\ref{lst:e_unified_top}).
 This can be done by instantiating an unit of type
 \lstinline$child_component_proxy$ (line~\ref{line_uvm_ml_e_proxy}) which is a
 predefined data type in the UVM-\textit{e} adapter.
@@ -185,7 +185,7 @@ When reusing an UVM-\textit{e} unit inside of an UVM-SV component it is
 necessary to integrate a proxy for the e unit within the UVM-SV
 component and then connect both.\\
 As shown in example~\ref{lst:SV_unified_top} this proxy component is created by
-declaring an component of type \lstinline$uvm_component$ inside of the parent
+declaring a component of type \lstinline$uvm_component$ inside of the parent
 component (line~\ref{line_sv_declare_proxy}). In the \lstinline$build_phase$ this proxy component is
 instantiated via calling \lstinline$uvm_ml_create_component$ (line~\ref{line_sv_create_proxy}) with the following
 syntax:
@@ -224,7 +224,7 @@ endclass : testbench
 \subsubsection{Creating a \emph{Side-by-Side} Environment}
 
 When there is no need to create an \emph{unified hierarchy} environment, UVM-ML supports also the ability to build an
-environment with multiple tops as displayed in figure~\ref{fig:UVM_ML_side_by_side}. Here each tree inside of an
+environment with multiple tops as displayed in figure~\ref{fig:UVM_ML_side_by_side}. Here each tree inside of a
 framework has its root instantiated as top component. This architecture is called \emph{side-by-side} and best
 applicable when there is only limited synchronization required between the components of different frameworks. This is
 indicated by the limitations of the architecture. It is not possible to use multi-language configuration as described in
@@ -235,7 +235,7 @@ completely on one tree before moving on to the next one.
  \centering
  %\includegraphics[width=1.0\textwidth,angle=0]{abb/UVM_ML_side_by_side}
  \includegraphics[scale=0.3]{abb/UVM_ML_side_by_side}
- \caption{Structure of an \emph{side-by-side} environment}
+ \caption{Structure of a \emph{side-by-side} environment}
 \label{fig:UVM_ML_side_by_side}
 \end{figure}
 
@@ -316,9 +316,9 @@ which are marked with a leading \lstinline$%$ are used for serialization and de-
 example~\ref{lst:e_type_mapping}, line~\ref{line_e_physical} ) and other fields inside the struct are ignored. The same
 occurs in UVM-SV for fields, if the \lstinline$`uvm_field_*$ macro is defined for them with the flag for
 packing/unpacking set within the macro (see example~\ref{lst:SV_type_mapping}, line~\ref{line_sv_physical}).\\
-If the default serialization and de-serialization cannot be applied to an transaction, manual ones can be created by
+If the default serialization and de-serialization cannot be applied to a transaction, manual ones can be created by
 implementing \lstinline$do_pack()$ as well as \lstinline$do_unpack()$ for UVM-SV transactions and
-\lstinline$pack()$ as well as \lstinline$unpack()$ for UVM-\textit{e}, but this is not further discussed in this paper. 
+\lstinline$pack()$ as well as \lstinline$unpack()$ for UVM-\textit{e}, but this is not further discussed in this report. 
 \subsection{Configuring a Multi-Language Environment} \label{ml_config}
 After building a multi-language environment it is often necessary to perform additional configurations before starting a
 test. For example, setting an agent as passive respectively active or the number of resources available. In an
@@ -374,7 +374,7 @@ extend testbench {
 \end{lstlisting}
 
 After the configuration is set in the database by the UVM-\textit{e} unit, the UVM-SV component needs to get
-the value from its database. When it is an primitive data type like an integer as in example~\ref{lst:SV_get_int},
+the value from its database. When it is a primitive data type like an integer as in example~\ref{lst:SV_get_int},
 the corresponding \lstinline$uvm_config_*::get()$ method should be used as shown in line~\ref{line_sv_get_int}. Here the
 value of \lstinline$field_1$ registered for this component in the database is assigned to the variable with the same
 name, \lstinline$field_1$.\\
@@ -396,7 +396,7 @@ endclass
 \paragraph{Configuring UVM-SV Components using Objects}\label{e_config_sv_object}
 
 When using configuration objects instead of primitive data types, the UVM-\textit{e} unit can access its configuration
-database the same way as with an primitive data type as shown in example~\ref{lst:e_set_object}. In this example
+database the same way as with a primitive data type as shown in example~\ref{lst:e_set_object}. In this example
 an object of type \lstinline$data$ is created (line~\ref{line_e_declare_object}) and then registered in the
 configuration database (line~\ref{line_e_set_object}) the same way as for primitive data types
 (section~\ref{config_sv_primitive}).
@@ -680,11 +680,11 @@ Following examples for sending transactions from UVM-\textit{e} units to UVM-SV 
 vice versa are provided to show, how to utilize the above introduced TLM functionalities for multi-language
 environments.
 \subsubsection{\textit{e} Units Sending Transactions to UVM-SV Components}
-In example~\ref{lst:SV_TLM_consumer} is the implementation of an TLM implementation port in UVM-SV
+In example~\ref{lst:SV_TLM_consumer} is the implementation of a TLM implementation port in UVM-SV
 displayed. After declaring (line~\ref{line_sv_imp_declare}) and instantiating (line~\ref{line_sv_imp_inst}) the port, it
 is registered at the UVM-SV multi-language adapter (line~\ref{line_sv_imp_reg}).
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: consumer side of an TLM connection},
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: consumer side of a TLM connection},
 label={lst:SV_TLM_consumer}]
 class mod_monitor extends uvm_monitor;
   uvm_analysis_imp#(packet, mod_monitor) in_port;|\label{line_sv_imp_declare}|
@@ -711,7 +711,7 @@ The corresponding UVM-\textit{e} producer is shown in example~\ref{lst:e_TLM_pro
 line~\ref{line_e_port_inst} and following registered by constraining \lstinline$bind()$ in line~\ref{line_e_port_reg}.
 After both components are instantiated under \lstinline$sys$, their TLM ports are connected in line~\ref{line_e_connect}.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={\textit{e}: producer side of an TLM connection},
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: producer side of a TLM connection},
 label={lst:e_TLM_producer}]
 unit inf_monitor like uvm_monitor {
   out_port : out interface_port of tlm_analysis of packet is instance;|\label{line_e_port_inst}|
@@ -735,7 +735,7 @@ Now the functionalities of consumer and producer are switched between both frame
 realized in UVM-\textit{e} (example~\ref{lst:e_TLM_consumer}). It is instantiated in line~\ref{line_e_imp_inst} followed
 by its registration in line~\ref{line_e_imp_reg}.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={\textit{e}: consumer side of an TLM connection},
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: consumer side of a TLM connection},
 label={lst:e_TLM_consumer}]
 unit mod_monitor like uvm_monitor {
   in_port : in interface_port of tlm_analysis of packet is instance;|\label{line_e_imp_inst}|
@@ -750,7 +750,7 @@ The producer is shown in example~\ref{lst:SV_TLM_producer}. Its TLM port is decl
 and instantiated in line~\ref{line_sv_port_inst}. After that it is registered at the framework adapter in
 line~\ref{line_sv_port_reg}. Finally both monitors are instantiated (line~\ref{line_sv_inst_monitors}) and their ports are connected (line~\ref{line_sv_con}).
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
-\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: producer side of an TLM connection},
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: producer side of a TLM connection},
 label={lst:SV_TLM_producer}]
 class inf_monitor extends uvm_monitor;
   uvm_analysis_port#(packet) out_port;|\label{line_sv_port_declare}|
@@ -787,7 +787,7 @@ class env extends uvm_env;
 \end{lstlisting}
 
 \subsection{Sequence Layering in a Multi-Language Environment}
-The last step in creating an fully functional multi-language testbench is the stimuli generation. There are two typical
+The last step in creating a fully functional multi-language testbench is the stimuli generation. There are two typical
 use cases for handling a sequence library implemented in a foreign framework. Firstly configuring the default sequence
 of the sequencer contained in the foreign sub-component via the top level component, which requires minimal interaction between
 these components. The second case requires ongoing communication between the sequences implemented in different
@@ -957,7 +957,7 @@ extend sys {
 };
 \end{lstlisting}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SV Sequence Items}
-After extending the foreign sequencer by a TLM interface, creating a proxy sequencer in UVM-\textit{e} and connecting both, the environment is now ready to execute UVM-SV sequence items via an UVM-\textit{e} sequence. To be more specific, the sequence creates a proxy sequence item and passes it to the sequencer proxy. After that the item is propagated to the remote sequencer via the TLM interface and is then used as an native sequence item inside of the UVM-SV component.\\
+After extending the foreign sequencer by a TLM interface, creating a proxy sequencer in UVM-\textit{e} and connecting both, the environment is now ready to execute UVM-SV sequence items via an UVM-\textit{e} sequence. To be more specific, the sequence creates a proxy sequence item and passes it to the sequencer proxy. After that the item is propagated to the remote sequencer via the TLM interface and is then used as a native sequence item inside of the UVM-SV component.\\
 Example~\ref{lst:e_send_sequence_item} shows, that foreign sequence items can now be treated like native ones inside of UVM-\textit{e} sequences.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: sending an UVM-SV sequence item  from  an UVM-\textit{e} sequence},
@@ -973,7 +973,7 @@ extend_SINGLE_ITEM master_sequence {
 };
 \end{lstlisting}
 \subparagraph{UVM-\textit{e} Do'ing UVM-SV Sequences}
-When executing UVM-SV sequences via an UVM-\textit{e} proxy sequencer a sequence item is transmitted from the proxy to the foreign sequencer. This sequence item contains all fields necessary to configure the sequence on the UVM-SV side. Because these information are send as an serialized bitstream, they need to be extracted before they can be used.\\
+When executing UVM-SV sequences via an UVM-\textit{e} proxy sequencer a sequence item is transmitted from the proxy to the foreign sequencer. This sequence item contains all fields necessary to configure the sequence on the UVM-SV side. Because these information are send as a serialized bitstream, they need to be extracted before they can be used.\\
 For this purpose a deserializer is created for each sequence and registered at the multi-language adapter. This is displayed in example~\ref{lst:SV_deserializer_sequence} below. Firstly the deserializer is implemented by extending the base class \lstinline$uvm_ml::uvm_ml_class_serializer$ in line~\ref{line_sv_extend_serializer}. Inside of this class the actual deserializer method is created (line~\ref{line_sv_deserialize}). Its argument is initially cast to the type of the sequence and after that each field of the sequence is extracted from the bitstream exemplarily shown in line~\ref{line_sv_unpack_int} for an integer field.
 Eventually the prior implemented deserializer is registered at the multi-language adapter of UVM-SV by creating a function (line~\ref{line_sv_register_function}) calling the UVM-ML method \lstinline$uvm_ml::register_class_serializer()$, which gets an object of the previously implemented deserializer class and the type of the sequence passed (line~\ref{line_sv_ml_register}). After that, this function is called in line~\ref{line_sv_call_function_register} to register the deserializer at the multi-language adapter.
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
@@ -1116,7 +1116,7 @@ class sequence_item_seq extends uvm_sequence;
 endclass : sequence_item_seq
 \end{lstlisting}
 \subparagraph{UVM-SV Do'ing UVM-\textit{e} Sequences}
-When executing an UVM-\textit{e} sequence from an UVM-SV component it is essentially to create a struct serving as a proxy for the foreign sequence. This is based on the fact, that UVM-\textit{e} uses \lstinline$when$-subtypes to implement different sequences and UVM-SV does not contain a equivalent construct modeling this. Therefore the proxy struct is used to represent an corresponding type for the inheritance of classes in UVM-SV, so they can be used to execute UVM-\textit{e} sequences via the TLM interface.\\
+When executing an UVM-\textit{e} sequence from an UVM-SV component it is essentially to create a struct serving as a proxy for the foreign sequence. This is based on the fact, that UVM-\textit{e} uses \lstinline$when$-subtypes to implement different sequences and UVM-SV does not contain a equivalent construct modeling this. Therefore the proxy struct is used to represent a corresponding type for the inheritance of classes in UVM-SV, so they can be used to execute UVM-\textit{e} sequences via the TLM interface.\\
 Example~\ref{lst:e_export_seq} shows how to utilize this proxy struct to start sequences in the foreign sub-component. Firstly a struct which inherits from the base struct \lstinline$ml_seq$ defined at the TLM interface template of the UVM-ML package is implemented for each sequence of the foreign UVC (line~\ref{line_e_proxy_seq}). Its name is the \lstinline$when$-subtype of the sequence and it contains all fields necessary to configure the corresponding sequence itself.\\
 After that, the sequence used to create the TLM interface of the sequence driver (see section~\ref{e_seqr_tlm}) is extended to contain the to be executed sequence (line~\ref{line_e_seq_inst}). Additionally the method \lstinline$do_user_seq()$ is extended (line~\ref{line_e_do_user_seq}). The different sequences are distinguished through the \lstinline$kind$ field of the proxy struct (line~\ref{line_e_seq_kind}). Eventually the sequence is created and started using the \lstinline$do$ action of UVM-\textit{e} (line~\ref{line_e_do_seq}).
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
@@ -1266,6 +1266,6 @@ task uvm_ml_run_test(
 \end{lstlisting} 
 \medskip
 Where \lstinline$tops[]$ is a dynamic array of top component identifiers and \lstinline$test$ represents a
-UVM-SV or UVM-SystemC test component or the full path of an file containing an UVM-\textit{e} test unit. Both arguments
+UVM-SV or UVM-SystemC test component or the full path of a file containing an UVM-\textit{e} test unit. Both arguments
 support the same syntax as the command line switches to specify the components (see section~\ref{uvm_top}). The argument
 indicating the test component is optional for the purpose of just generating the multi-language environment.

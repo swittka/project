@@ -1,10 +1,10 @@
 \section{Overview of the Universal Verification Methodology}\label{uvm}
 
 The \emph{Universal Verification Methodology (UVM)} describes the Methodology to
-verify \emph{integrated circuit (IC)} designs and is standardized by Accellera,
+verify \emph{integrated circuit (IC)} designs and is standardized by Accellera \cite{uvm},
 an independent standards organization. One of the key principles is to create
 reusable verification environments and thereby enabling efficient development.
-This is accomplished by using \emph{Universal Verification Components (UVCs)}\cite{uvm_sv}.
+This is accomplished by using \emph{Universal Verification Components (UVCs)}.
 
 \subsection{Universal Verification Components}\label{uvc}
 
@@ -26,7 +26,7 @@ structure of these components inside a UVM testbench is shown in figure
 For each interface of an \emph{device under test (DUT)} an interface UVC has
 to be created. Its purpose is to establish the communication between
 the testbench and the signals of the DUT. More than one interface UVC can be
-connected to the DUT. Its standard architecture contains the following elements:
+connected to the DUT. Its standard architecture contains the following elements \cite{uvm_sv}:
 
 \begin{itemize}
   \item \textbf{Sequence item}\\
@@ -37,11 +37,11 @@ connected to the DUT. Its standard architecture contains the following elements:
   DUT themselves.
   \item \textbf{Sequencer/Sequence Driver}\\
   The sequencer in \emph{UVM-SystemVerilog} (UVM-SV) respectively the sequence
-  driver in UVM-\textit{e} is a stimulus generator, which creates random
+  driver in UVM-\textit{e} \cite{uvm_e} is a stimulus generator, which creates random
   stimulus by executing sequences. These sequences either generate one or more
   sequence items or other sequences.
   \item \textbf{Driver/Bus Functional Model (BFM)}\\
-  The driver in UVM-SV respectively BFM in UVM-\textit{e} receives a sequence
+  The driver in UVM-SV respectively BFM in UVM-\textit{e} \cite{uvm_e} receives a sequence
   item from a sequencer or sequence driver. Then the extracted attributes are
   used to drive the signals of the DUT. So the active functionalities of an
   interface UVC are split between the transaction-level sequencer or sequence
@@ -83,11 +83,11 @@ Thereby the DUT is seen as a black box. Meaning its internal structure is not
 visible to the testbench. So the module UVC describes this internal structure
 and uses this information to verify the interaction of multiple interfaces of
 the DUT. Since it is a passive element, it can be reused in system-level
-verification.
+verification \cite{uvm}.
 
 \subsection{Data Communication between Components}\label{tlm}
 
-To communicate between UVCs TLM ports are used, which improve reusability. With
+To communicate between UVCs TLM ports are used, which improve reusability \cite{uvm_sv}. With
 them transactions are exchanged without explicit type conventions via a
 method call, that is bind to the TLM port. It is even possible to communicate
 between different verification languages, if they include TLM ports for
