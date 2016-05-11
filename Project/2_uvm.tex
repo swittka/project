@@ -1,7 +1,7 @@
 \section{Overview of the Universal Verification Methodology}\label{uvm}
 
 The \emph{Universal Verification Methodology (UVM)} describes the Methodology to
-verify \emph{integrated circuit (IC)} designs and is standardized by Accellera \cite{uvm},
+verify \emph{integrated circuit (IC)} designs. It is standardized by Accellera \cite{uvm},
 an independent standards organization. One of the key principles is to create
 reusable verification environments and thereby enabling efficient development.
 This is accomplished by using \emph{Universal Verification Components (UVCs)}.
@@ -32,12 +32,12 @@ connected to the DUT. Its standard architecture contains the following elements 
   \item \textbf{Sequence item}\\
   Sequence items represent stimulus for an interface of the
   DUT or can be extracted from it for observation.
-  The fields of a sequence item are derived from the attributes of the transaction
-  to create an object in a higher level of abstraction than the signals of the
-  DUT themselves.
+  The fields of a sequence item are derived from the attributes of the transaction.
+  By this an object in a higher level of abstraction than the signals of the
+  DUT themselves is created.
   \item \textbf{Sequencer/Sequence Driver}\\
   The sequencer in \emph{UVM-SystemVerilog} (UVM-SV) respectively the sequence
-  driver in UVM-\textit{e} \cite{uvm_e} is a stimulus generator, which creates random
+  driver in UVM-\textit{e} \cite{uvm_e} is a stimulus generator. It creates random
   stimulus by executing sequences. These sequences either generate one or more
   sequence items or other sequences.
   \item \textbf{Driver/Bus Functional Model (BFM)}\\
@@ -91,6 +91,6 @@ To communicate between UVCs TLM ports are used, which improve reusability \cite{
 them transactions are exchanged without explicit type conventions via a
 method call, that is bind to the TLM port. It is even possible to communicate
 between different verification languages, if they include TLM ports for
-compatible transactions, for example \emph{SystemVerilog}, \emph{SystemC} and
-\emph{e}. Communication between verification languages is discussed in more
+compatible transactions. Examples for verificatino languages supporting TLM ports are UVM-SystemVerilog, UVM-SystemC and
+UVM-\textit{e}. Communication between verification languages is discussed in more
 detail in section \ref{ml_tlm}.
