@@ -125,7 +125,7 @@ It is recommended to extend the UVM-SV component
 (line~\ref{line_extend_component}), which will
 be reused. After that, all multi-language functionalities are put inside this new
 component. This ensure, that the original component can still be used in
-non-multi-language environments. The extended one needs to include the UVM
+non-multi-language environments. For this purpose the single-language UVC is imported (line~\ref{line_uvm_uvc_package}) and everything is put inside of a package for the multi-language functionalities (line~\ref{line_uvm_uvc_ml_package}). This package needs to include the UVM
 package (line~\ref{line_uvm_package}/\ref{line_uvm_macros}) as well as the adapter
 package for UVM-SV (line~\ref{line_uvm_ml_package}).
 After that all additional multi-language functionalities can be put inside the
@@ -134,16 +134,22 @@ communication via TLM interfaces (see section~\ref{ml_tlm}).
 \medskip
 \lstset{language={SystemVerilog}, numbers=left, escapechar=|}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: extended multi-language component}, label={lst:SV_unified_sub}]
+package ml_uvc_pkg;					|\label{line_uvm_uvc_ml_package}|
+
 import uvm_pkg::*;					|\label{line_uvm_package}|
 `include "uvm_macros.svh"			|\label{line_uvm_macros}|
 import uvm_ml::*;					|\label{line_uvm_ml_package}|
+import uvc_pkg;						|\label{line_uvm_uvc_package}|
 
 class ml_uvc_env extends uvc_env;			|\label{line_extend_component}|
   `uvm_component_utils(ml_uvc_env)
   function void build_phase(uvm_phase phase);
     // Additional multi-language functionalities
+    // introduced in the next subsections
   endfunction : build_phase
 endclass : ml_uvc_env
+
+endpackage : ml_uvc_pkg;
 \end{lstlisting}
 \medskip
 Corresponding to the extensions in the UVM-SV component the UVM-\textit{e}
@@ -199,6 +205,8 @@ to support the creation of an \emph{unified hierarchy} environment.
 \medskip
 \lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={SystemVerilog: instantiating an e unit}, label={lst:SV_unified_top}]
+import uvm_ml::*;
+
 class testbench extends uvm_env;
   uvm_component e_uvc;|\label{line_sv_declare_proxy}|
   `uvm_component_utils(testbench)
@@ -1185,7 +1193,7 @@ class tb extends uvm_test;
   endtask
 endclass : tb
 \end{lstlisting}
-The end of test synchronization of a slave component is displayed in example~\ref{lst:e_slave_test_end}. It contains a simple port (line~\ref{line_e_simple_port}), which is connected to the \lstinline$reg$ variable of the SystemVerilog module in the previous example. When all objections are dropped the method \lstinline$all_objections_dropped()$ is automatically called. It is overwritten in line~\ref{line_e_objections_dropped} to assert the prior defined simple port. Thus the master component gets indicated, that it can end the test.
+The end of test synchronization of a slave component is displayed in example~\ref{lst:e_slave_test_end}. It contains a simple port (line~\ref{line_e_simple_port}), which is connected to the \lstinline$reg$ variable of the SystemVerilog module in the previous example. When all objections are dropped the method \lstinline$all_objections_dropped()$ is automatically called. It is overwritten in line~\ref{line_e_objections_dropped} to assert the prior defined simple port. Thus the master component gets indicated, that it can end the test. If the end of test synchronization is implemented in a subcomponent, it is mandatory to disable the method \lstinline$all_objections_dropped()$ of \lstinline$sys$. It calls \lstinline$stop_run()$, which ends the test without any synchronizations between the frameworks.
 \lstset{language=e, numbers = left, escapechar=|, breaklines=true}
 \begin{lstlisting}[frame=htrbl, caption={\textit{e}: signaling master component that all objections are dropped},
 label={lst:e_slave_test_end}]
