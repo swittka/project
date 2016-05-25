@@ -44,6 +44,7 @@
 % Paket für Boxen im Text
 \usepackage{fancybox}
 
+
 % bricht lange URLs "schoen" um
 \usepackage[hyphens,obeyspaces,spaces]{url}
 
@@ -79,9 +80,6 @@
 % Runde Klammern für Zitate
 %\usepackage[numbers,round]{natbib}
 
-% Festlegung Art der Zitierung - Havardmethode: Abkuerzung Autor + Jahr
-\bibliographystyle{alphadin}
-
 % Schaltet den zusätzlichen Zwischenraum ab, den LaTeX normalerweise nach einem Satzzeichen einfügt.
 \frenchspacing
 
@@ -100,7 +98,7 @@
   numbers=left,
   numberstyle=\tiny,
   numbersep=5pt,
-  breaklines,
+  breaklines=true,
   breakatwhitespace,
   keywordstyle=\color{black}\bfseries,
   stringstyle=\sffamily,
@@ -111,7 +109,7 @@
 \AtBeginDocument{
 \counterwithin{lstlisting}{section}
 }
-
+\setlength{\emergencystretch}{2pt}
 % Indexerstellung
 \makeindex
 
@@ -277,7 +275,8 @@
 
 \include{4_conclusion}
 
-\include{5_future_work}
+
+%\include{5_future_work}
 
 %\include{beispiel}
 
@@ -285,12 +284,13 @@
 % einfacher Zeilenabstand
 \singlespacing
 % Literaturliste soll im Inhaltsverzeichnis auftauchen
+\addcontentsline{toc}{section}{References}
 \newpage
-\addcontentsline{toc}{section}{Literaturverzeichnis}
-% Literaturverzeichnis anzeigen
-\renewcommand\refname{Literaturverzeichnis}
-\bibliography{Hauptdatei}
 
+% Literaturverzeichnis anzeigen
+%\renewcommand\refname{References}
+\bibliographystyle{plain}
+\bibliography{Hauptdatei}
 %% Index soll Stichwortverzeichnis heissen
 % \newpage
 % % Stichwortverzeichnis soll im Inhaltsverzeichnis auftauchen
@@ -310,5 +310,5 @@
 %\newpage
 %\thispagestyle{empty} % erzeugt Seite ohne Kopf- / Fusszeile
 %\section*{ }
-\listoftodos
+
 \end{document}
