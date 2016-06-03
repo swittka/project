@@ -316,6 +316,54 @@ packing/unpacking set within the macro (see example~\ref{lst:SV_type_mapping}, l
 If the default serialization and de-serialization cannot be applied to a transaction, manual ones can be created. This is achieved by
 implementing \lstinline$do_pack()$ as well as \lstinline$do_unpack()$ for UVM-SV transactions and
 \lstinline$pack()$ as well as \lstinline$unpack()$ for UVM-\textit{e}. Manual serialization and de-serialization is not further discussed in this report. 
+\subsubsection{Automatic Generation of Data Types}
+Additionally to manually re-implementing a data type, which is already available in a foreign framework, IES provides an utility called \lstinline$mltypemap$ automatically generating and mapping it.
+\paragraph{Invoking \lstinline$mltypemap$}
+The TCL-based tool \lstinline$mltypemap$ can be invoked from \lstinline$irun$ using the following arguments:
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+irun [-uvm] [-64bit] -mltypemap_input <tcl-input-file> <pkg-containing-data-type>
+\end{lstlisting} 
+%\medskip
+The input file contains the TCL commands configuring \lstinline$mltypemap$ (see section \ref{config_mltypemap}) as well as the command invoking the mapping process. Also the file containing the package with the data type has to be included.
+Note, that the flags for compiling the verification environment have to be set as well. Following are examples listed invoking \lstinline$mltypemap$ for UVM-\textit{e} and UVM-SV:
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+#UVM-e
+irun -64bit -mltypemap_input do.tcl uvc_top.e
+
+#UVM-SV
+irun -uvm -64bit -mltypemap_input do.tcl uvc_pkg.sv
+\end{lstlisting} 
+%\medskip
+\paragraph{Configuring \lstinline$mltypemap$} \label{config_mltypemap}
+Multiple TCL commands are avaiable to configure \lstinline$mltypemap$. Here they are listed with their most important arguments. For the full list of arguments for each command see \cite{cdnshelp}.
+\subparagraph{configure_code}
+The TCL command \lstinline$configure_code$ is used to apply global configurations to the generated code. Its most important arguments are:
+\begin{itemize}
+  \item{-lang SV | e}\\
+  The name of the target language for which the configuration is applied.
+  \item{-uvm_ml_oa}\\
+  Specifies that the code is generated for the UVM-ML solution provided by Accellera.
+\end{itemize}
+\subparagraph{configure_scope}\\
+This TCL command should be used, if source and target package name differ, but it does not work in IES version 1.5.1. Use \lstinline$configure_type$ to set the scope for each data type individually.
+\subparagraph{configure_type}\\
+Using this command configurations can be applied to each individual data types.
+\begin{itemize}
+  \item{-type <source-type-name>}\\
+  Specifies the name of the source data type. It needs to include the language identifier as well as the name of the package containing the source data type.
+  \item{-to_name <target-type-name>}\\
+  The name of the target data type. It has to be the simple name of the data type without language identifier and package name.
+  \item{-to_scope <pkg-name>}\\
+  This parameter is used, if the packages of source and target data type have different names. Its argument is the new target package name.
+  \item{-skip_field <field-name>}\\
+  The here specified field is excluded from the generated serializer/deserializer. This parameter can be repeated for multiple fields. A typical use case is combining this parameter with \lstinline$configure_field -nopack$
+\end{itemize}
+\subparagraph{configure_field}
+\paragraph{Mapping Types with \lstinline$mltypemap$} \label{mapping_mltypemap}
 \subsection{Configuring a Multi-Language Environment} \label{ml_config}
 After building a multi-language environment it is often necessary to perform additional configurations before starting a
 test. For example, setting an agent as passive respectively active or the number of resources available. In an
