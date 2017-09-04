@@ -1,0 +1,56 @@
+\subsection{Running a Test in a Multi-Language Environment with Incisive Enterprise Simulator}
+
+After completing the testbench the final step is to run the multi-language environment. Here is shown how to achieve
+this with Incisive Enterprise Simulator provided by Cadence Design Systems Inc. Also a task of the
+UVM-SV adapter is presented for this purpose, which provides an alternative option for running a test.
+
+\subsubsection{Setup IES for UVM-ML Mode}
+Independent of how the test is started, IES has to be set up to contain the functionalities necessary to support multi-language testbenches. By the use of at least one of the irun invocation options \lstinline$-ml_uvm$, \lstinline$-uvmtop$ or \lstinline$-uvmtest$ the UVM-ML mode of Incisive is turned on. Thereby \lstinline$-ml_uvm$ has only the purpose to enable the multi-language mode and the other two options additionally have the in section~\ref{uvm_top} explained functionalities.\\
+With the installation of the UVM-ML package multiple argument files are created, which can be used to configure IES. They are located at the directory:
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/run_utils/
+\end{lstlisting}
+Each argument file is available in a 32 bit and a 64 bit version, so the appropriate one can be used for the UVM-ML installation (just insert the suitable version number for \emph{XX} in the following file names). A file with general UVM-ML options is available, which already contains \lstinline$-ml_uvm$ to ensure the start of IES in multi-language mode called \lstinline$ml_options.XX.f$. Additional argument files for each framework were created, which can be invoked in \lstinline$irun$:
+\begin{itemize}
+  \item UVM-\textit{e}: \lstinline$e_options.XX.f$
+  \item UVM-SV 1.1: \lstinline$sv_1.1_options.XX.f$
+  \item UVM-SV 1.2: \lstinline$sv_1.2_options.XX.f$
+  \item UVM-SystemC: \lstinline$sc_options.XX.f$
+\end{itemize}
+\subsubsection{Starting a test with the irun utility} \label{uvm_top}
+IES provides command line switches for its \lstinline$irun$ utility to declare the top component(s) of the testbench as
+well as the to be started test as shown below.
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+-uvmtest frmw_indicator:test_name
+-uvmtop frmw_indicator:top_name
+\end{lstlisting} 
+\medskip
+Both \lstinline$uvmtest$ as well as \lstinline$uvmtop$ firstly need to identify the framework adapter of the test
+respectively top component. This is done via \lstinline$frmw_indicator$ which can be \lstinline$SV$, \lstinline$e$ or
+\lstinline$SC$ as described in section~\ref{sv_inside_e}. Seperated via a colon comes the actual test/top component. For
+UVM-\textit{e} this is the full path of the file containing it. In contrast UVM-SV along with UVM-SystemC uses
+its component type name. So contrary to UVM-\textit{e} the full path to the file containing it has to be forwarded to
+\lstinline$irun$ prior to that.
+
+\subsubsection{Starting a test via the UVM-SV adapter}
+
+Alternativly to these command line switches the UVM-SV adapter supports a procedure call to set the top
+component(s) respectively the test of the multi-language testbench. The other adapters for UVM-\textit{e} and
+UVM-SystemC do not support such a call. So there is the only possibility to use the above mentioned command line
+switches. The task provided by the UVM-SV adapter is called \lstinline$uvm_ml_run_test$ and has the following
+syntax:
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+task uvm_ml_run_test(
+  string tops[],
+  [string test = ""])
+\end{lstlisting} 
+\medskip
+Where \lstinline$tops[]$ is a dynamic array of top component identifiers. Optionally \lstinline$test$ represents a
+UVM-SV or UVM-SystemC test component or the full path of a file containing an UVM-\textit{e} test unit. Both arguments
+support the same syntax as the command line switches to specify the components (see section~\ref{uvm_top}). The argument
+indicating the test component is optional for the purpose of just generating the multi-language environment.

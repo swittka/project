@@ -1,0 +1,312 @@
+\subsection{Configuring a Multi-Language Environment} \label{ml_config}
+After building a multi-language environment it is often necessary to perform additional configurations before starting a
+test. For example, setting an agent as passive respectively active or the number of resources available. In an
+environment with an \emph{unified hierarchy} such configurations can be propagated from one framework tree
+to all sub-trees in other frameworks. This is achieved by using the native UVM configuration constructs of each
+framework, which are listed below:
+\begin{itemize}
+\item{UVM-SV:}
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+uvm_config_db#(T)::set()
+uvm_config_db#(T)::get()
+\end{lstlisting} 
+%\medskip
+
+\item{UVM-\textit{e}}
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+keep uvm_config_set()
+keep uvm_config_get()
+\end{lstlisting} 
+%\medskip
+\end{itemize}
+
+Each framework maintains its own configuration database. These are synchronized automatically via the multi-language
+backplane when a configuration is set. Thereby for getting the configuration information each framework just needs to
+access its local database, which hides the multi-language functionality from each framework.
+
+\subsubsection{\textit{e} Units Configuring UVM-SV Components}\label{e_config_sv}
+
+When configuring UVM-SV components via UVM-\textit{e} units it is necessary to distinguish between two cases. Firstly
+configuring it via primitive data types, where the data can directly be registered and obtained. Secondly using
+configuration objects, which requires to obtain the object using its base class followed by a cast to its proper data
+type.\\
+Since UVM-ML version~1.4.4 the generic UVM-SV syntax using \lstinline$uvm_config_db#(T)$ is supported. This
+provides a more convenient option to configure user defined data types. 
+
+\paragraph{Configuring UVM-SV Components using Primitive Data Types}\label{config_sv_primitive}
+
+When data is passed from an UVM-\textit{e} unit to an UVM-SV component,
+the UVM-\textit{e} unit needs to constrain \lstinline$uvm_config_set()$ as shown in example~\ref{lst:e_set_int}
+line~\ref{line_e_set_int}. In this example the value \lstinline$16'h7fff$ is assigned to the variable
+\lstinline$field_1$ in all components, which contain the substring \lstinline$uvc_env$ in their full path.
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: register an integer in configuration database},
+label={lst:e_set_int}]
+extend testbench {
+    keep uvm_config_set("*uvc_env*", "field_1", 16'h7fff);|\label{line_e_set_int}|
+};
+\end{lstlisting}
+
+After the configuration is set in the database by the UVM-\textit{e} unit, the UVM-SV component needs to get
+the value from its database. When it is a primitive data type like an integer as in example~\ref{lst:SV_get_int},
+the corresponding \lstinline$uvm_config_*::get()$ method should be used as shown in line~\ref{line_sv_get_int}. Here the
+value of \lstinline$field_1$ registered for this component in the database is assigned to the variable with the same
+name, \lstinline$field_1$.\\
+When the field was specified with the corresponding \lstinline$uvm_field_*$ macro, calling
+\lstinline$uvm_config_*::get()$ is not required. Its value is automatically retrieved from the configuration database.
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting an integer from configuration database},
+label={lst:SV_get_int}]
+class ml_uvc_env extends uvc_env;
+  int field_1;|\label{line_sv_declare_int}|
+  function void end_of_elaboration_phase(uvm_phase phase);
+  	super.end_of_elaboration_phase(phase);
+    void'(uvm_config_int::get(this, "", "field_1", field_1));|\label{line_sv_get_int}|
+  endfunction : end_of_elaboration_phase
+endclass
+\end{lstlisting}
+
+\paragraph{Configuring UVM-SV Components using Objects}\label{e_config_sv_object}
+
+When using configuration objects instead of primitive data types, the UVM-\textit{e} unit can access its configuration
+database the same way as with a primitive data type. In example~\ref{lst:e_set_object} an object of type \lstinline$data$ is created (line~\ref{line_e_declare_object}) and then registered in the
+configuration database (line~\ref{line_e_set_object}) the same way as for primitive data types
+(section~\ref{config_sv_primitive}).
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={e: register an object in configuration database}, label={lst:e_set_object}]
+struct data {
+  % addr    : int;
+  % trailer : int;
+  % txt     : string;
+};
+
+unit u {
+  my_sv_child: child_component_proxy is instance;
+    keep my_sv_child.type_name == "SV:test";
+  
+  d : data;|\label{line_e_declare_object}|
+    keep d.addr    == 10;
+    keep d.trailer == 20;
+    keep d.txt     == "config object msg";
+
+  keep uvm_config_set("my_sv_child","conf_data",d);|\label{line_e_set_object}|
+};
+\end{lstlisting}
+The difference between configuring an UVM-SV component using a primitive data type compared to an object
+is displayed in example~\ref{lst:SV_get_object}. Additionally to the declaration of the object in
+line~\ref{line_sv_declare_object} another one of type \lstinline$uvm_object$ is required
+(line~\ref{line_sv_declare_data}). Configuration objects need to be derived from this base type as shown in
+line~\ref{line_sv_class_object} (\lstinline$uvm_transaction$ inherits from \lstinline$uvm_object$).\\
+When the field of type \lstinline$uvm_object$ was specified with the \lstinline$uvm_field_object$ macro, calling
+\lstinline$uvm_config_object::get()$ is not required. Its value is automatically retrieved from the configuration
+database and can then be cast directly to the proper data type.\\
+As mentioned previously, the generic syntax using \lstinline$uvm_config_db#(T)$ can be used to obtain configuration
+objects as an alternative to \lstinline$uvm_config_object$.
+The benefit of this approach is, that an additional cast after getting the object is not required as shown in
+line~\ref{line_sv_get_user_object}. The object with the user defined type \lstinline$data$ is directly obtained from
+the database, so line \ref{line_sv_declare_object}, \ref{line_sv_get_object} and \ref{line_sv_cast_object} are replaced
+by this single line of code.
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting a configuration object}, label={lst:SV_get_object}]
+class data extends uvm_transaction;|\label{line_sv_class_object}|
+  int addr;
+  int trailer;
+  string txt;
+  
+  `uvm_object_utils_begin(data)
+    `uvm_field_int(   addr,    UVM_ALL_ON)
+    `uvm_field_int(   trailer, UVM_ALL_ON)
+    `uvm_field_string(txt,     UVM_ALL_ON)
+  `uvm_object_utils_end
+endclass
+
+class test extends uvm_env;
+  uvm_object tmp_obj;|\label{line_sv_declare_object}|
+  data conf_data;|\label{line_sv_declare_data}|
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    void'(uvm_config_object::get(this,"","conf_data", tmp_obj));|\label{line_sv_get_object}|
+    assert($cast(conf_data,tmp_obj)!=0);|\label{line_sv_cast_object}|
+    //-- alternativly uvm_config_db can be used
+    //void'(uvm_config_db#(data)::get(this,"","conf_data",conf_data));|\label{line_sv_get_user_object}|
+  endfunction
+endclass
+\end{lstlisting}
+It is important that the declarations of the configuration object in both verification languages are mapped to each
+other. This includes the number and order of variables as well as the name of the type definition. For more information
+on type mapping see section~\ref{type_mapping}.
+
+\subsubsection{SystemVerilog Components Configuring UVM-\textit{e} Units}
+Similar to section~\ref{e_config_sv} UVM-SV components can configure UVM-\textit{e} units via the
+configuration database. The syntax remains the same, just the part of getting respectively setting is switched for both
+frameworks. The field that should be configured has to be registered in the database by the UVM-SV
+component prior to creating the sub-component. Then the UVM-\textit{e} unit needs to be constrained using
+\lstinline$uvm_config_get()$ to receive the value from the configuration database.
+
+\paragraph{Configuring UVM-\textit{e} Units using Primitive Data Types}
+When configuring an UVM-\textit{e} unit via an UVM-SV component, the component needs to register the value in
+the configuration database by calling \lstinline$uvm_config_*::set()$. This needs to be
+done before creating the foreign sub-component using the field. That is necessary so the constraint solver of
+\textit{e} can access the database, when the unit is instantiated. This is displayed in example~\ref{lst:SV_set_int},
+that shows the UVM-SV component, configuring a field of type integer within an UVM-\textit{e} unit. Firstly
+the integer is registered at the configuration database in line~\ref{line_sv_set_int}. After that the component, which uses this registered field, is created in
+line~\ref{line_sv_comp_int}.
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an integer in configuration database},
+label={lst:SV_set_int}]
+class uvc_env extends uvm_env;
+  uvm_component e_uvc;
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    uvm_config_int::set(this,"*e_uvc*","field_1", 10);|\label{line_sv_set_int}|
+    e_uvc = uvm_ml_create_component("e", "uvc_env_u", "e_uvc", this);|\label{line_sv_comp_int}|
+  endfunction : build_phase
+endclass : uvc_env
+\end{lstlisting}
+
+Once the field is registered in the configuration database, the UVM-\textit{e} unit just needs to constrain
+\lstinline$uvm_config_get$, as shown in example~\ref{lst:e_get_int}, line~\ref{line_e_get_int}. After that the value can
+be used inside of the unit.
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={e: getting an integer from configuration database}, label={lst:e_get_int}]
+unit uvc_env_u {
+  field_1 : int;
+  keep soft uvm_config_get(field_1); |\label{line_e_get_int}|
+};
+\end{lstlisting}
+\paragraph{Configuring UVM-\textit{e} Units using Objects}
+Like UVM-SV components, UVM-\textit{e} units can be configured via objects. An example for registering an
+object in the configuration database via an UVM-SV component is described in
+example~\ref{lst:SV_set_object}. Firstly the component needs to declare the type of the object
+(line~\ref{line_sv_class_object_2}). After registering the object at the configuration database with
+\lstinline$uvm_config_db#(T)::set()$ (line~\ref{line_sv_set_user_object}), the foreign child component, which uses the
+configuration object, can be created (line~\ref{line_sv_comp_object_2}).
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: register an object in configuration database},
+label={lst:SV_set_object}]
+class data extends uvm_transaction;|\label{line_sv_class_object_2}|
+  int addr;
+  int trailer;
+  string txt;
+  
+  `uvm_object_utils_begin(data)
+    `uvm_field_int(   addr,    UVM_ALL_ON)
+    `uvm_field_int(   trailer, UVM_ALL_ON)
+    `uvm_field_string(txt,     UVM_ALL_ON)
+  `uvm_object_utils_end
+endclass
+
+class test extends uvm_env;
+  uvm_component my_e_child; 
+  data conf_data;|\label{line_sv_declare_data_2}|
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    conf_data.addr = 10;
+    conf_data.trailer = 20;
+    conf_data.txt = "config object msg"
+    void'(uvm_config_db#(data)::set(this, "my_e_child", "conf_data", conf_data));|\label{line_sv_set_user_object}|
+    my_e_child = uvm_ml_create_component("e", "child_u", "my_e_child", this);|\label{line_sv_comp_object_2}|
+  endfunction
+endclass
+\end{lstlisting}
+
+Similar to the UVM-SV component, the type of the configuration object needs to be declared in the
+\textit{e} unit, too (line~\ref{line_e_declare_object_2}). These declarations need to be mapped onto each other. This
+means that they need the same number and order of fields as well as matching type names. See section~\ref{type_mapping}
+for more information about type mapping.\\
+If the declarations match, the UVM-\textit{e} unit firstly needs to instantiate the configuration object
+(line~\ref{line_e_inst_object_2}). After that constraining \lstinline$uvm_config_get()$ is used to obtain the object from the
+configuration database.
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={e: getting an object from configuration database}, label={lst:e_get_object}]
+struct data {|\label{line_e_declare_object_2}|
+  % addr    : int;
+  % trailer : int;
+  % txt     : string;
+};
+
+unit child_u {
+  conf_data : data;|\label{line_e_inst_object_2}|
+    keep soft uvm_config_get(conf_data);
+};
+\end{lstlisting}
+\subsubsection{Connecting the Interface UVCs to the DUT}
+Another configuration task when creating a multi-language environment is connecting the interface UVC to the DUT. The configuration database can also be used for this, if the interface UVC is implemented in a foreign framework. Following is discribed, how to configure the interface of an UVM-SV respectively the signal map of an UVM-\textit{e} interface UVC in a multi-language environment.
+\paragraph{Configuring the UVM-SV Interface}
+When a UVM-SV interface UVC is instantiated inside of an UVM-e component, the virtual interface of the interface UVC cannot be connected to the DUT inside of an \lstinline$inital$ block.This is because these blocks are executed after UVM-ML has executed the elaboration phases. Therefore a function is defined registering the interface in the configuration database (example~\ref{lst:SV_config_interface}, line~\ref{line_sv_function_vif}). Thereby the interface UVC is instantiated directly under \lstinline$sys$ and can obtain the interface from the database by calling \lstinline$uvm_config_db#(T)::get()$. The previously defined function is then executed in a static initialization call (line~\ref{line_sv_call_function_vif}).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: configuring the UVM-SV interface},
+label={lst:SV_config_interface}]
+module tb;
+  uvc_if inf(...);
+	
+  function bit set_vif(virtual uvc_if vif);|\label{line_sv_function_vif}|
+    uvm_config_db#(virtual uvc_if)::set(null,"sys.sv_uvc*","vif",vif);|\label{line_sv_set_db_vif}|
+    return 1;
+  endfunction
+
+  bit res = set_vif(inf);|\label{line_sv_call_function_vif}|
+endmodule : tb
+\end{lstlisting}
+\paragraph{Configuring the UVM-\textit{e} Signal Map}
+When creating a multi-language environment with a UVM-\textit{e} interface UVC, the simple ports of the signal map are connected to the DUT using the configuration database. In example~\ref{lst:SV_set_smp} the \lstinline$hdl_path()$ for the signal map and simple ports inside of it are registered in the configuration database. Additinally the \lstinline$agent()$ is registered by the top level UVM-SV component. The base \lstinline$hdl_path()$ for the signal map is registered in line~\ref{line_sv_smp_path}. It consists of the string representing the name of the top level module of the DUT. Following the \lstinline$agent()$ is set in line~\ref{line_sv_smp_agent}. Thereby \lstinline$"SV"$ indicates, that the top level module of the DUT is implemented in SystemVerilog. After that the \lstinline$hdl_path()$ for each simple port is registered, exemplarily shown for a single port in line~\ref{line_sv_port_path}. Thereby the registered string is the full path of the DUT signal without the top level module, which is set for the signal map (line~\ref{line_sv_smp_path}).
+Finally the foreign interface UVC containing the signal map is instantiated in line~\ref{line_sv_create_smp}, after all necessary entries are registered in the configuration database.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: configuring the simple ports of the UVM-\textit{e} signal map},
+label={lst:SV_set_smp}]
+class tb extends uvm_env;
+  uvm_component e_uvc;
+  //use uvm_component_utils macro here and implement the constructor
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    uvm_config_string::set(this, "e_uvc.smp", "hdl_path()",          "~/tb_top");|\label{line_sv_smp_path}|
+    uvm_config_string::set(this, "e_uvc.smp", "agent()",             "SV");|\label{line_sv_smp_agent}|
+    uvm_config_string::set(this, "e_uvc.smp", "signal_1_p_hdl_path", "signal_1");|\label{line_sv_port_path}|
+    //...
+    e_uvc = uvm_ml_create_component("e", "uvc_env_u", "e_uvc", this);|\label{line_sv_create_smp}|
+  endfunction : build_phase
+endclass : tb
+\end{lstlisting}
+The next step in connecting the signal map of the interface UVC is to obtain the previously registered entries from the configuration database. The definition of the signal map of the interface UVC is displayed in example~\ref{lst:e_get_smp} line~\ref{line_e_smp}. Again it contains only a single examplary simple port. After that, the extended signal map is shown using the configuration database to connect the simple port to the DUT. Firstly a string is created for each simple port to store the path obtained from the database (line~\ref{line_e_declare_path_string}). After that the database is accessed to get the \lstinline$hdl_path()$ and \lstinline$agent()$ of the top level module of the DUT (line~\ref{line_e_get_smp_path}/\ref{line_e_get_smp_agent}). Eventually the \lstinline$hdl_path()$ of the simple port is obtained (line~\ref{line_e_get_port_string}) and constrained (line~\ref{line_e_set_port}). The full path is then automatically composed of the \lstinline$hdl_path()$ of the signal map and simple port.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: getting the simple port configuration of the UVM-\textit{e} signal map},
+label={lst:e_get_smp}]
+unit signal_map_u like uvm_signal_map {|\label{line_e_smp}|
+  signal_1_p: inout simple_port of uint(bits: 4) is instance;
+  //...
+  keep HDL_SIGNAL_PATH is all of {
+    soft signal_1_p.hdl_path() == "signal_1";
+    //...
+  };
+};
+
+extend signal_map_u {|\label{line_e_extend_smp}|
+  signal_1_p_hdl_path : string;|\label{line_e_declare_path_string}|
+  //...
+
+  keep uvm_config_get(hdl_path());|\label{line_e_get_smp_path}|
+  keep uvm_config_get(agent());|\label{line_e_get_smp_agent}|
+
+  keep ML_HDL_SIGNAL_PATH is all of {
+    uvm_config_get(signal_1_p_hdl_path);|\label{line_e_get_port_string}|
+    signal_1_p.hdl_path() == value(signal_1_p_hdl_path);|\label{line_e_set_port}|
+    //...
+  };
+}; 
+\end{lstlisting}

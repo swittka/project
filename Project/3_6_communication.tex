@@ -1,0 +1,153 @@
+\subsection{Data Communication in a Multi-Language Environment} \label{ml_tlm}
+Additionally to the configuration database, UVM-ML uses TLM communication to manage the communication between components
+of different frameworks. While communication via the configuration database only occurs once per item to build the
+structure of the testbench, TLM communication is used to establish ongoing communication between components during the
+test. Data transfer by use of UVM-ML TLM communication is achieved by serializing transactions. After that, the resulting
+bitstream is sent to the destination component via the connected port. Eventually it is de-serialized there to regain the transaction.\\
+For this it is required, that the backplane knows, which types are mapped onto each other. Also the serialization and
+de-serialization need to match, so the same transaction is available at both components. This implies, that the number
+and order of fields in the user defined types have to be consistent.
+Here it is discussed how to establish TLM communication on the example of TLM analysis ports. For more information on
+type mapping see section~\ref{type_mapping}.\\
+When it is ensured, that both frameworks handle compatible data items, TLM analysis ports have to be implemented in each
+component including the \lstinline$write()$ method of the receiving TLM port. After the ports are instantiated they
+are registered at their framework adapter. For UVM-SV this is done by calling
+\lstinline$uvm_ml::tlm1::register()$ and for UVM-\textit{e} the port is bind to external by constraining \lstinline$bind()$.
+Finally the ports are connected via \lstinline$uvm_ml::connect()$ for UVM-SV or
+\lstinline$uvm_ml.connect_names()$ for UVM-\textit{e}. This should only be done once, either at the
+SystemVerilog component or the UVM-\textit{e} unit.
+\begin{itemize}
+\item{UVM-SV:}
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+static function void uvm_ml::ml_tlm1#(T)::register(port);
+
+function bit uvm_ml::connect(
+  string producer_path,
+  string consumer_path);
+\end{lstlisting} 
+%\medskip
+
+\item{UVM-\textit{e}}
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+keep bind(port, external);
+
+uvm_ml.connect_names(
+  producer_path : string,
+  consumer_path : string) : bool;
+\end{lstlisting} 
+%\medskip
+\end{itemize}
+
+Following, examples for sending transactions from UVM-\textit{e} units to UVM-SV components and
+vice versa are provided. They show, how to utilize the above introduced TLM functionalities for multi-language
+environments.
+\subsubsection{\textit{e} Units Sending Transactions to UVM-SV Components}
+In example~\ref{lst:SV_TLM_consumer} is the implementation of a TLM implementation port in UVM-SV
+displayed. After declaring (line~\ref{line_sv_imp_declare}) and instantiating (line~\ref{line_sv_imp_inst}) the port, it
+is registered at the UVM-SV multi-language adapter (line~\ref{line_sv_imp_reg}).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: consumer side of a TLM connection},
+label={lst:SV_TLM_consumer}]
+class mod_monitor extends uvm_monitor;
+  uvm_analysis_imp#(packet, mod_monitor) in_port;|\label{line_sv_imp_declare}|
+  
+  `uvm_component_utils(mod_monitor)
+  
+  function new(string name="mod_monitor", uvm_component parent);
+    super.new(name, parent);
+    in_port = new("in_port", this);|\label{line_sv_imp_inst}|
+  endfunction 
+  
+  function void phase_ended(uvm_phase phase);
+    if(phase.get_name() == "build") begin
+      uvm_ml::ml_tlm1#(packet)::register(in_port);|\label{line_sv_imp_reg}|
+    end
+  endfunction : phase_ended
+  
+  virtual function void write(packet pkt);|\label{line_sv_imp_write}|
+  //...
+  endfunction : write
+endclass
+\end{lstlisting}
+The corresponding UVM-\textit{e} producer is shown in example~\ref{lst:e_TLM_producer}. Its TLM port is implemented in
+line~\ref{line_e_port_inst} and following registered by constraining \lstinline$bind()$ in line~\ref{line_e_port_reg}.
+After both components are instantiated under \lstinline$sys$, their TLM ports are connected in line~\ref{line_e_connect}.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: producer side of a TLM connection},
+label={lst:e_TLM_producer}]
+unit inf_monitor like uvm_monitor {
+  out_port : out interface_port of tlm_analysis of packet is instance;|\label{line_e_port_inst}|
+    keep soft bind(out_port, external);|\label{line_e_port_reg}|
+};
+
+extend sys {
+  e_inf_monitor  : inf_monitor is instance;
+  sv_mod_monitor : child_component_proxy is instance;
+    keep sv_mod_monitor.type_name == "sv:mod_monitor";
+  
+    
+  connect_ports() is also {
+    uvm_connect_names("sys.e_inf_monitor.outport", append(sv_mod_monitor.e_path(), ".in_port"));|\label{line_e_connect}|
+  };  
+};
+\end{lstlisting}
+
+\subsubsection{SystemVerilog Components Sending Transactions to UVM-\textit{e} Units}
+Now the functionalities of consumer and producer are switched between both frameworks, so the TLM implementation port is
+realized in UVM-\textit{e} (example~\ref{lst:e_TLM_consumer}). It is instantiated in line~\ref{line_e_imp_inst} followed
+by its registration in line~\ref{line_e_imp_reg}.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: consumer side of a TLM connection},
+label={lst:e_TLM_consumer}]
+unit mod_monitor like uvm_monitor {
+  in_port : in interface_port of tlm_analysis of packet is instance;|\label{line_e_imp_inst}|
+    keep soft bind(out_port, external);|\label{line_e_imp_reg}|
+    
+  write(pkt : packet) is {|\label{line_e_imp_write}|
+  //...
+  };
+};
+\end{lstlisting}
+The producer is shown in example~\ref{lst:SV_TLM_producer}. Its TLM port is declared in line~\ref{line_sv_port_declare}
+and instantiated in line~\ref{line_sv_port_inst}. After that it is registered at the framework adapter in
+line~\ref{line_sv_port_reg}. Finally both monitors are instantiated (line~\ref{line_sv_inst_monitors}) and their ports are connected (line~\ref{line_sv_con}).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: producer side of a TLM connection},
+label={lst:SV_TLM_producer}]
+class inf_monitor extends uvm_monitor;
+  uvm_analysis_port#(packet) out_port;|\label{line_sv_port_declare}|
+  
+  `uvm_component_utils(inf_monitor)
+  
+  function new(string name="inf_monitor", uvm_component parent);
+    super.new(name, parent);
+    out_port = new("out_port", this);|\label{line_sv_port_inst}|
+  endfunction 
+  
+  function void phase_ended(uvm_phase phase);
+    if(phase.get_name() == "build") begin
+      uvm_ml::ml_tlm1#(packet)::register(out_port);|\label{line_sv_port_reg}|
+    end
+  endfunction : phase_ended
+endclass
+
+class env extends uvm_env;
+  inf_monitor   sv_inf_monitor;
+  uvm_component e_mod_monitor;
+  
+  `uvm_component_utils(env)
+  
+  function void build_phase(uvm_phase phase);|\label{line_sv_inst_monitors}|
+    super.build_phase(phase);
+    sv_inf_monitor = inf_monitor::type_id::create("sv_inf_monitor", this);
+    e_mod_monitor  = uvm_ml_create_component("e", "mod_monitor", "e_mod_monitor", this); 
+  endfunction : build_phase
+  
+  function void connect_phase(uvm_phase phase);
+    uvm_ml::connect(sv_inf_monitor.get_full_name(), {get_full_name(),".e_mod_monitor.in_port"});|\label{line_sv_con}|
+    endfunction : connect_phase
+\end{lstlisting}

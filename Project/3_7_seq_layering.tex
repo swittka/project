@@ -1,0 +1,389 @@
+\subsection{Sequence Layering in a Multi-Language Environment}
+The last step in creating a fully functional multi-language testbench is the stimuli generation. There are two typical
+use cases for handling a sequence library implemented in a foreign framework. Firstly configuring the default sequence
+of the sequencer contained in the foreign sub-component via the top level component. This requires minor interaction between
+these components. The second case requires ongoing communication between the sequences implemented in different
+frameworks. Here a virtual sequence implemented at the top level continuously executes sequences of the sub-component.
+Following is discussed, which extensions are required to support the use of foreign sequences.
+
+\subsubsection{Configuring the Default Sequence}
+The simplest way to use foreign sequences is to configure the default sequence of the sequencer included in the foreign
+sub-component. This is done by using the configuration databases of both frameworks (see section~\ref{ml_config} for more detailed
+information about the configuration databases). Through this it is determined, which sequence is started when the test begins.
+
+\paragraph{UVM-\textit{e} Configuring the UVM-SV Default Sequence}
+Example~\ref{lst:SV_get_default_sequence} shows, which changes are necessary in the UVM-SV sub-component to make its default sequence configurable via a foreign UVM-\textit{e} unit. The communication between the foreign components is done by registering the name of the sequence at the configuration database. Therefore a variable for this string has to be defined (line~\ref{line_sv_seq_name_var}). Following it is used to get the name of the sequence from the database in line~\ref{line_sv_get_seq_name}. Afterwards the sequence is obtained from the factory by searching for it with the provided name (line~\ref{line_sv_find_seq_by_name}). Finally this sequence is used to set the default sequence of the sequencer included in the agent, which is contained in the base class of this multi-language component (line~\ref{line_sv_set_default_seq}).   
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: getting the default sequence from configuration database},
+label={lst:SV_get_default_sequence}]
+class ml_uvc_env extends uvc_env;
+  string seq_name; |\label{line_sv_seq_name_var}|
+  
+  function void build_phase(uvm_phase phase);
+    uvm_factory factory = uvm_factory::get();|\label{line_sv_get_factory_handle}|
+    uvm_object_wrapper seq_wrap;
+    super.build_phase(phase);
+    void'(uvm_config_string::get(this, "", "seq_name", seq_name));|\label{line_sv_get_seq_name}|
+    seq_wrap = factory.find_by_name(seq_name);|\label{line_sv_find_seq_by_name}|
+    uvm_config_db#(uvm_object_wrapper)::set(this, "agent.sequencer.run_phase", "default_sequence", seq_wrap);|\label{line_sv_set_default_seq}|
+    endfunction
+endclass : ml_uvc_env
+\end{lstlisting}
+The UVM-\textit{e} unit needs to provide the name of the sequence used to configure the default sequence of the foreign sequencer. For this purpose the name is registered at the configuration database in line~\ref{line_e_set_default_seq} of example~\ref{lst:e_set_default_sequence}.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: setting the default sequence via configuration database},
+label={lst:e_set_default_sequence}]
+extend sys {
+  sv_uvc : child_component_proxy is instance;
+    keep sv_uvc.type_name == "SV:ml_uvc_env"
+    keep uvm_config_set("sv_uvc", "seq_name", "seq")|\label{line_e_set_default_seq}|
+};
+\end{lstlisting}
+\paragraph{UVM-SV Configuring the UVM-\textit{e} Main Sequence}
+Reversed the configuration database can be used to configure the \lstinline$main$ sequence of an UVM-\textit{e} unit through the enclosing UVM-SV component. Therefore the sequence driver of the sub-component has to be extended by a string variable, which is shown in line~\ref{line_e_get_seq_name} of example~\ref{lst:e_get_main_sequence}. It is used to store the name of the sequence, which is received from the configuration database in line~\ref{line_e_get_seq_name}. Afterwards the \lstinline$main$ sequence is extended, so its \lstinline$kind$-field can be constrained to equal the sequence identified by the previously received string. It is necessary to mention, that \lstinline$driver$ refers to the \emph{sequence driver} of UVM-\textit{e} and should not be mistaken with the \emph{driver} class of UVM-SV. 
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: getting the \lstinline$main$ sequence from configuration database},
+label={lst:e_get_main_sequence}]
+extend sequence_driver_u {
+  sequence_name : string;|\label{line_e_name_var}|
+    keep uvm_config_get(sequence_name);|\label{line_e_get_seq_name}|
+};
+
+extend MAIN uvc_sequence {
+  keep soft sequence.kind == driver.sequence_name.as_a(uvc_sequence_kind);|\label{line_e_constrain_main_seq}|
+};
+\end{lstlisting}
+Finally the name of the sequence, which should be started, has to be registered in the configuration database by the top level UVM-SV component (example~\ref{lst:SV_set_main_sequence}). This is done in line~\ref{line_sv_set_main_seq}, where the name of the sequence is registered for all sub-components, which end with the string \emph{'driver'}.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: setting the \lstinline$main$ sequence via configuration database},
+label={lst:SV_set_main_sequence}]
+class svtop extends uvm_test;
+  function void build_phase(uvm_phase phase);
+    uvm_config_string::set(this, "*driver", "sequence_name", "SIMPLE_SEQ");|\label{line_sv_set_main_seq}|
+  endfunction : build_phase
+endclass : svtop
+\end{lstlisting}
+\subsubsection{Reusing Sequences of Foreign Frameworks}
+Since configuring the default sequence can only be done for a single sequence prior to starting the \lstinline$run$ phase. Another approach has to be considered, when dealing with multiple sequences, which should be executed dynamically throughout the \lstinline$run$ phase. Firstly the sequencer of the foreign sub-component is extended with a TLM interface. Thereby it can receive the information, which sequence is to be executed next and how to configure it. The counterpart of the TLM interface is implemented in a proxy sequencer of the top level component. Finally the sequence item as well as the sequences have to be exported, so they can be transmitted via the TLM interface. After that the foreign sequences can be used like they were native ones.
+\paragraph{UVM-\textit{e} Sequences executing UVM-SV Sequences and Items}
+The above mentioned steps for executing multiple foreign sequences in a multi-language environment are now discussed. It is displayed in particular how UVM-\textit{e} sequences execute foreign UVM-SV sub-sequences and sequence items.
+\subparagraph{Extending the UVM-SV Sequencer by a TLM Interface}
+When extending the UVM-SV Sequencer by a TLM interface, the UVM-ML package provides a template class for this sequencer TLM interface, located at:
+\smallskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/sv/seqr_tlm_interface.sv
+\end{lstlisting} 
+\smallskip
+In example~\ref{lst:SV_sequencer_tlm_if} it is shown how to utilize this template class. Firstly it is extended to support the base sequence and sequence item of the UVM-SV component (line~\ref{line_sv_extend_tlm_if}). After that the randomization of the fields inside the sequence item has to be disabled to apply the values provided by the UVM-\textit{e} sequencer proxy. This is achieved by implementing the virtual function \lstinline$uvm_sequence_item_set_fields()$ of the template class (line~\ref{line_sv_set_fields}). Inside of this method the randomization of each field of the sequence item has to be disabled (line~\ref{line_sv_disable_random}). This has to be done, because after receiving the sequence item via the TLM interface, randomization is used to verify, that the item is valid according to its constraints. Otherwise the provided values would be lost in this process.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: creating the TLM interface for the sequencer},
+label={lst:SV_sequencer_tlm_if}]
+class sequencer_tlm_if extends ml_seqr_tlm_if#(packet, base_sequence);|\label{line_sv_extend_tlm_if}|
+  //use uvm_component_utils macro here and implement the constructor
+
+  function uvm_sequence_item set_fields(uvm_sequence_item item);|\label{line_sv_set_fields}|
+    packet pkt;   
+    if($cast(pkt, item)) begin
+      pkt.field_1.rand_mode(0);|\label{line_sv_disable_random}|
+      ...
+    end;
+    return pkt;      
+  endfunction : set_fields
+endclass : sequencer_tlm_if
+\end{lstlisting}
+After the TLM interface is implemented, it has to be integrated into the sequencer (example~\ref{lst:SV_sequencer_tlm}). To achieve this the sequencer is extended by a handle for the TLM interface (line~\ref{line_sv_declare_sequencer_tlm}). Followed by creating the interface via the UVM-SV factory in line~\ref{line_sv_create_sequencer_tlm}. At last a reference of the sequencer is added to the TLM interface (line~\ref{line_sv_set_sequencer}), so the received sequences and sequence items can be forwarded to the sequencer. 
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: extending the sequencer by a TLM interface},
+label={lst:SV_sequencer_tlm}]
+class ml_sequencer extends sequencer;
+    sequencer_tlm_if seqr_tlm_if;|\label{line_sv_declare_sequencer_tlm}|
+    //use uvm_component_utils macro here and implement the constructor
+
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        seqr_tlm_if = sequencer_tlm_if::type_id::create("seqr_tlm_if", this);|\label{line_sv_create_sequencer_tlm}|
+    endfunction : build_phase
+
+    function void end_of_elaboration_phase(uvm_phase phase);
+        void'(seqr_tlm_if.set_seqr(this));|\label{line_sv_set_sequencer}|
+    endfunction : end_of_elaboration_phase
+endclass : ml_sequencer
+\end{lstlisting}
+\subparagraph{Creating an UVM-\textit{e} Proxy Sequencer} 
+Next the proxy sequencer has to be implemented providing the ability to access the foreign sequencer by its TLM interface like displayed in example~\ref{lst:e_proxy_sequencer}. Initially two structs have to be created. One corresponding to the UVM-SV sequence item (line~\ref{line_e_struct_packet}) and the other contains all fields of the foreign base sequence from which all other sequences are derived (line~\ref{line_e_struct_base_sequence}) (see section~\ref{type_mapping} for detailed information on type mapping). The second struct can be left empty, if only sequence items are used.\\
+After that, these two structs are used to create the proxy sequencer itself with its sequences. Therefore the \lstinline$sequence$ macro of UVM-\textit{e} is used (line~\ref{line_e_sequence_proxy}). It uses the previously defined struct representing the UVM-SV sequence item as its own one. Additionally it uses a template for the proxy sequencer provided by the UVM-ML package located at:
+\smallskip
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/e/ml_base_seqr_proxy.e
+\end{lstlisting}
+\smallskip
+Following the abstract \lstinline$get()$ method of the just created proxy sequencer has to be implemented (line~\ref{line_e_abstract_get}). Either by calling \lstinline$get_next_item()$ to send the next sequence item to the remote sequencer via the TLM interface or by using \lstinline$wait @never$, if no items are sent at all. Afterwards the sequence proxy is extended by an abstract method \lstinline$get_exported_seq$ (line~\ref{line_e_abstract_get_exported_seq}). It returns the corresponding sequence struct, which is after that sent to the foreign sequencer via the TLM interface (line~\ref{line_e_send_sequence}).
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: creating a proxy sequencer},
+label={lst:e_proxy_sequencer}]
+struct packet like any_sequence_item {|\label{line_e_struct_packet}|
+... //--fields corresponding to the UVM-SV sequence item
+};
+
+struct base_sequence like any_sequence_item {|\label{line_e_struct_base_sequence}|
+... //--fields corresponding to the UVM-SV base sequence
+};
+
+sequence master_sequence using|\label{line_e_sequence_proxy}|
+    item = packet,
+    sequence_driver_type = ml_base_seqr_proxy of (base_sequence),
+    created_driver = seqr_proxy;
+
+extend seqr_proxy {
+    get(req : *any_sequence_item) @sys.any is only {|\label{line_e_abstract_get}|
+        req = get_next_item();
+        //wait @never;
+    };
+};
+
+extend master_sequence {
+    get_exported_seq() : base_sequence is {|\label{line_e_abstract_get_exported_seq}|
+        return NULL;
+    };
+
+    body() @sys.any is only {
+        driver.send_sequence(get_exported_seq());|\label{line_e_send_sequence}|
+    };
+};
+\end{lstlisting}
+Finally the TLM interfaces of the foreign sequencer and the sequencer proxy have to be connected (example~\ref{lst:e_connect_proxy}). The previously mentioned template for the proxy sequencer contains a \lstinline$connect_proxy()$ method for this purpose. Its argument consists of the string representing the full path to the TLM interface of the remote sequencer (line~\ref{line_e_connect_proxy}).
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: connecting the proxy sequencer and foreign sequencer},
+label={lst:e_connect_proxy}]
+extend sys {
+  sv_sequencer : child_component_proxy is instance;
+    keep sv_sequencer.type_name == "sv:ml_sequencer"
+  proxy_sequencer : seqr_proxy is instance;
+  
+  connect_ports() is also {
+    proxy_sequencer.connect_proxy(append(sv_sequencer.e_path(), seqr_tlm_if));|\label{line_e_connect_proxy}|
+  }; 
+};
+\end{lstlisting}
+\subparagraph{UVM-\textit{e} Do'ing UVM-SV Sequence Items}
+After extending the foreign sequencer by a TLM interface, creating a proxy sequencer in UVM-\textit{e} and connecting both, the environment is now ready to execute UVM-SV sequence items via an UVM-\textit{e} sequence. To be more specific, the sequence creates a proxy sequence item and passes it to the sequencer proxy. After that the item is propagated to the remote sequencer via the TLM interface and is then used as a native sequence item inside of the UVM-SV component.\\
+Example~\ref{lst:e_send_sequence_item} shows, that foreign sequence items can now be treated like native ones inside of UVM-\textit{e} sequences.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: sending an UVM-SV sequence item  from  an UVM-\textit{e} sequence},
+label={lst:e_send_sequence_item}]
+extend master_sequence_kind : [SINGLE_ITEM];
+
+extend_SINGLE_ITEM master_sequence {
+  !req : packet;
+  
+  body() @driver.clock is only {
+    do req;
+  };
+};
+\end{lstlisting}
+\subparagraph{UVM-\textit{e} Do'ing UVM-SV Sequences}
+When executing UVM-SV sequences via an UVM-\textit{e} proxy sequencer a sequence item is transmitted from the proxy to the foreign sequencer. This sequence item contains all fields necessary to configure the sequence on the UVM-SV side. Because these information are send as a serialized bitstream, they need to be extracted before they can be used.\\
+For this purpose a deserializer is created for each sequence and registered at the multi-language adapter. This is displayed in example~\ref{lst:SV_deserializer_sequence} below. Firstly the deserializer is implemented by extending the base class \lstinline$uvm_ml::uvm_ml_class_serializer$ in line~\ref{line_sv_extend_serializer}. Inside of this class the actual deserializer method is created (line~\ref{line_sv_deserialize}). Its argument is initially cast to the type of the sequence. After that each field of the sequence is extracted from the bitstream exemplarily shown in line~\ref{line_sv_unpack_int} for an integer field.
+Eventually the prior implemented deserializer is registered at the multi-language adapter of UVM-SV. This is done by creating a function (line~\ref{line_sv_register_function}) calling the UVM-ML method \lstinline$uvm_ml::register_class_serializer()$. It receives an object of the previously implemented deserializer class and the type of the sequence passed (line~\ref{line_sv_ml_register}). After that, this function is called in line~\ref{line_sv_call_function_register} to register the deserializer at the multi-language adapter.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: deserializer for foreign sequences},
+label={lst:SV_deserializer_sequence}]
+class uvc_pkg_simple_sequence_serializer extends uvm_ml::uvm_ml_class_serializer;|\label{line_sv_extend_serializer}|
+  function void deserialize(inout uvm_pkg::uvm_object obj);|\label{line_sv_deserialize}|
+    uvc_pkg::simple_seq inst;
+    $cast(inst, obj);
+    inst.field_1 = unpack_field_int(16);|\label{line_sv_unpack_int}|
+    ...
+  endfunction : deserialize
+endclass : uvc_pkg_simple_sequence_serializer
+
+function void register_uvc_pkg_simple_sequence_serializer();|\label{line_sv_register_function}|
+  uvc_pkg_simple_sequence_serializer inst;
+  inst = new;
+  uvm_ml::register_class_serializer(inst, uvc_pkg::simple_seq::get_type());|\label{line_sv_ml_register}|
+endfunction : register_uvc_pkg_simple_sequence_serializer
+
+register_uvc_pkg_simple_sequence_serializer();|\label{line_sv_call_function_register}|
+\end{lstlisting}
+The next step is to implement the counterpart of the TLM communication to configure the foreign sequence. For this purpose a sequence item is created in UVM-\textit{e}, which contains the corresponding fields of the foreign sequence as shown in example~\ref{lst:e_exporting_sequence}, line~\ref{line_e_sequence_item_proxy} (see section~\ref{type_mapping} for more information about type mapping). Afterwards the sequence of the UVM-\textit{e} proxy sequencer has to be extended. This is done, so a sequence is available at the top level, which acts as a proxy sequence. It executes the corresponding foreign sequence (line~\ref{line_e_extend_seq_kind}/\ref{line_e_extend_master_seq}). Therefore it implements the abstract method \lstinline$get_exported_seq$ declared at the base sequence of the proxy sequencer. This method returns the sequence item configuring the foreign sequence (line~\ref{line_e_imp_get_exported_seq}). It is used in the \lstinline$body()$ method of the base sequence in example~\ref{lst:e_proxy_sequencer}, line~\ref{line_e_send_sequence}.\\
+The base sequence has to be extended for each foreign sequence, which should be accessible by the top level component.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: exporting the foreign UVM-SV sequence},
+label={lst:e_exporting_sequence}]
+struct simple_seq like base_sequence {|\label{line_e_sequence_item_proxy}|
+  %field_1 : uint;
+};
+
+extend master_sequence_kind : [SIMPLE_SEQ];|\label{line_e_extend_seq_kind}|
+extend SIMPLE_SEQ master_sequence {|\label{line_e_extend_master_seq}|
+  exported_seq : simple_seq;
+  get_exported_seq() : base_sequence is {|\label{line_e_imp_get_exported_seq}|
+    result = exported_seq;
+  };
+};
+\end{lstlisting}
+Now the foreign UVM-SV sequences can be used like they were native UVM-\textit{e} sequences. This is done by executing the sequences, which extend the base sequence of the proxy sequencer. Thereby they act as proxy sequences.
+\paragraph{UVM-SV Sequences executing UVM-\textit{e} Sequences and Items}
+Like all the other multi-language functionalities, sequence layering is not limited to UVM-\textit{e} sequences executing foreign UVM-SV sub-sequences. It can also be used with switched roles. This means, that UVM-\textit{e} sub-sequences are utilized within UVM-SV sequences. The same steps as mentioned previously are required to use multi-language sequence layering in this reversed configuration. 
+\subparagraph{Extending the UVM-\textit{e} Sequencer by a TLM Interface}\label{e_seqr_tlm}
+Firstly the template for integrating TLM interfaces into UVM-\textit{e} sequencers has to be imported, which is located at:
+\smallskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/e/seqr_tlm_interface.e
+\end{lstlisting} 
+\smallskip
+Then a TLM interface is added to the UVM-\textit{e} sequencer (sequence driver) serving as the connection point between both frameworks (example~\ref{lst:e_sequencer_tlm_if}). Therefore the base sequence is extended to get a designated sequence dealing with the requests coming from UVM-SV (line~\ref{line_e_master_seq}). It needs to contain an abstract method \lstinline$do_user_seq()$ and its only argument has to be of type \lstinline$ml_seq$ (this type is defined in the template file).
+After that, this new sequence and the sequence item of the UVC are used to add a TLM interface to the sequencer. Therefore the above imported TLM interface template is instantiated (line~\ref{line_e_inst_tlm_if}). Following a constraint is used to connect the TLM interface and sequencer, so that sequence items and sequences can be executed over the TLM interface on the sequencer.
+Additionally the \lstinline$MAIN$ sequence has to be disabled (line~\ref{line_e_disable_main}), so sequences are only started via the TLM interface.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: adding a TLM interface to the UVM-\textit{e} sequencer},
+label={lst:e_sequencer_tlm_if}]
+extend uvc_sequence_kind : [ML_MASTER];
+
+extend ML_MASTER uvc_sequence {|\label{line_e_master_seq}|
+  do_user_seq(p : ml_seq) @driver.clock is empty;
+};
+
+extend sequencer {|\label{line_e_inst_tlm_if}|
+  tlm_if : ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) is instance;
+    keep tlm_if.sequencer == me;
+};
+
+extend MAIN uvc_sequence {|\label{line_e_disable_main}|
+  body() @driver.clock is only {};
+};
+\end{lstlisting}
+\subparagraph{Creating an UVM-SV Proxy Sequencer}
+On the other side of the TLM interface a proxy sequencer has to be created telling the foreign UVM-\textit{e} sequence driver, which sequence to execute. The UVM-ML package also provides a class for this proxy sequencer located at:
+\smallskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+$UVM_ML_HOME/ml/primitives/sequence_layering/sv/sequencer_proxy.sv
+\end{lstlisting} 
+\smallskip
+Example~\ref{lst:SV_proxy_sequencer} shows how to use this class to create a proxy sequencer for the UVM-SV top level component. After including the file mentioned above, implement a class for the proxy sequencer by extending \lstinline$child_component_proxy$ (line~\ref{line_sv_class_proxy_sequencer}). Inside of this class, the provided proxy sequencer has to be instantiated (line~\ref{line_sv_define_sequencer_proxy}/\ref{line_sv_inst_sequencer_proxy}).\\
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: creating a proxy sequencer},
+label={lst:SV_proxy_sequencer}]
+class proxy_sequencer extends child_component_proxy;|\label{line_sv_class_proxy_sequencer}|
+  ml_sequencer_proxy seqr_proxy;|\label{line_sv_define_sequencer_proxy}|
+  //use uvm_component_utils macro here and implement the constructor
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    seqr_proxy = ml_sequencer_proxy::type_id::create("seqr_proxy", this);|\label{line_sv_inst_sequencer_proxy}|
+  endfunction : build_phase
+endclass : proxy_sequencer
+\end{lstlisting}
+After extending the UVM-\textit{e} sequence driver and implementing a proxy sequencer in UVM-SV, the TLM interfaces of both components have to be connected. This is displayed in example~\ref{lst:SV_connect_proxy_sequencer}. Following to the instantiation of both components, their TLM interfaces are connected via the method \lstinline$connect_proxy()$ of the class \lstinline$ml_sequencer_proxy$ (line~\ref{line_sv_connect_tlm_proxy}). Its argument is the full name of the TLM interface inside of the UVM-\textit{e} sequence driver.\\
+The proxy sequencer class provided by UVM-ML cannot be instantiated directly in the environment. This is, because additionally to the functionalities inherited from \lstinline$uvm_sequencer$ the multi-language ones from \lstinline$child_component_proxy$ are required (e.g. the framework indicator).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: connecting proxy sequencer and foreign sequencer},
+label={lst:SV_connect_proxy_sequencer}]
+class env extends uvm_env;
+  proxy_sequencer proxy_seqr;
+  uvm_component e_seqr;
+  //use uvm_component_utils macro here and implement the constructor
+  
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    e_seqr = uvm_ml_create_component("e", "sequencer", "e_seqr", this);
+    proxy_seqr = proxy_sequencer::type_id::create("proxy_seqr", this);
+  endfunction : build_phase
+  
+  function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    proxy_seqr.connect_proxy({e_seqr.get_full_name(),".tlm_if."});|\label{line_sv_connect_tlm_proxy}|
+  endfunction : connect_phase
+endclass : env
+\end{lstlisting}
+\subparagraph{UVM-SV Do'ing UVM-\textit{e} Sequence Items}
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+The next step after connecting the TLM interfaces of the proxy sequencer and the foreign sequencer is to enable the proxy sequencer to execute sequence items of the UVM-\textit{e} sub-component. Therefore the TLM interface of the foreign sequencer has to be extended by a method called \lstinline$process_item()$. It casts the  base sequence item to the proper type used in the sub-component, which is passed via the TLM port from the UVM-SV component (example~\ref{lst:e_sequencer_tlm_if_process}). The resulting sequence item can either be identical to the one passed via the TLM interface or if necessary, be modified. For example, validating the correctness of the passed sequence item.
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: processing the sequence item send from the UVM-SV component},
+label={lst:e_sequencer_tlm_if_process}]
+extend ml_seqr_tlm_if of (packet, ML_MASTER uvc_sequence) {
+  process_item(p : any_sequence_item) : packet is {
+    result = p.as_a(packet);
+  };
+};
+\end{lstlisting}
+Needless to say, that the sequence item processed at the foreign sequencer, first has to be generated at the proxy sequencer. Therefore a matching sequence item need to be implemented in UVM-SV (see section \ref{type_mapping} for more information about type mapping). Following a sequence is created by extending \lstinline$uvm_sequence$ (example~\ref{lst:SV_sequence_item_seq}). This sequence has to contain a field of the previously implemented sequence item (line~\ref{line_sv_declare_packet}). By calling the UVM-SV macro \lstinline$uvm_declare_p_sequencer()$ the sequence is connected to the proxy sequencer by specifying its type (line~\ref{line_sv_p_sequencer}). In the \lstinline$body()$ task of the sequence the transaction is created and send to the foreign sequencer using the \lstinline$`uvm_do()$ macro or comparable ones of UVM-SV (line~\ref{line_sv_do_pkt}).
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: sending an UVM-\textit{e} sequence item  from  an UVM-SV sequence},
+label={lst:SV_sequence_item_seq}]
+class sequence_item_seq extends uvm_sequence;
+  packet pkt;|\label{line_sv_declare_packet}|
+  `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_p_sequencer}|
+
+  virtual task body();
+    `uvm_do(pkt);|\label{line_sv_do_pkt}|
+  endtask  
+endclass : sequence_item_seq
+\end{lstlisting}
+\subparagraph{UVM-SV Do'ing UVM-\textit{e} Sequences}
+When executing an UVM-\textit{e} sequence from an UVM-SV component it is essentially to create a struct serving as a proxy for the foreign sequence. This is based on the fact, that UVM-\textit{e} uses \lstinline$when$-subtypes to implement different sequences and UVM-SV does not contain a equivalent construct modeling this. Therefore the proxy struct is used to represent a corresponding type for the inheritance of classes in UVM-SV, so they can be used to execute UVM-\textit{e} sequences via the TLM interface.\\
+Example~\ref{lst:e_export_seq} shows how to utilize this proxy struct to start sequences in the foreign sub-component. Firstly a struct which inherits from the base struct \lstinline$ml_seq$ defined at the TLM interface template of the UVM-ML package is implemented for each sequence of the foreign UVC (line~\ref{line_e_proxy_seq}). Its name is the \lstinline$when$-subtype of the sequence and it contains all fields necessary to configure the corresponding sequence itself.\\
+After that, the sequence used to create the TLM interface of the sequence driver (see section~\ref{e_seqr_tlm}) is extended to contain the to be executed sequence (line~\ref{line_e_seq_inst}). Additionally the method \lstinline$do_user_seq()$ is extended (line~\ref{line_e_do_user_seq}). The different sequences are distinguished through the \lstinline$kind$ field of the proxy struct (line~\ref{line_e_seq_kind}). Eventually the sequence is created and started using the \lstinline$do$ action of UVM-\textit{e} (line~\ref{line_e_do_seq}).
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: executing the sequence received from the proxy sequencer},
+label={lst:e_export_seq}]
+struct SUB_TYPE_SEQ like ml_seq {|\label{line_e_proxy_seq}|
+  %field_1 : uint;
+  //...
+};
+
+extend ML_MASTER uvc_sequence {
+  !sub_type_seq : SUB_TYPE_SEQ uvc_sequence;|\label{line_e_seq_inst}|
+
+  do_user_seq(p : ml_seq) @ driver.clock is also {|\label{line_e_do_user_seq}|
+    if(p.kind == "SUB_TYPE_SEQ") {|\label{line_e_seq_kind}|
+      do sub_type_seq keeping {|\label{line_e_do_seq}|
+        .field_1 == p.as_a(SUB_TYPE_SEQ).field_1;
+        //...
+      };
+    };
+  };
+};
+\end{lstlisting}
+In the top level UVM-SV component a sequence is initially defined (example~\ref{lst:SV_exporting_seq}) for each foreign sequence corresponding to the struct defined in example~\ref{lst:e_export_seq}. These sequences will be used to start the foreign sequences via the TLM connection between proxy sequencer and foreign sequencer. It extends the sequence \lstinline$ml_seq$ (line~\ref{line_sv_extend_ml_seq}) defined in the base proxy sequencer provided by the UVM-ML package and contains all fields of the exported UVM-\textit{e} sequence (line~\ref{line_sv_seq_fields}). Additionally the UVM-SV macro \lstinline$`uvm_declare_p_sequencer()$ is used to set the associated proxy sequencer (line~\ref{line_sv_set_proxy}) and finally the field \lstinline$kind$ inherited from \lstinline$ml_seq$ is set inside of the constructor (line~\ref{line_sv_set_kind}). This field is used to identify the to be started sequence at the foreign sequencer.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: exporting the UVM-\textit{e} sequence},
+label={lst:SV_exporting_seq}]
+class SUB_TYPE_SEQ extends ml_seq;|\label{line_sv_extend_ml_seq}|
+  rand int unsigned field_1;|\label{line_sv_seq_fields}|
+  //...
+
+  `uvm_object_utils_begin(SUB_TYPE_SEQ)
+    `uvm_field_int(field_1, UVM_DEFAULT)
+  `uvm_object_utils_end
+  `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_set_proxy}|
+
+  function new(string name="SUB_TYPE_SEQ");
+    super.new(name);
+    kind = name;|\label{line_sv_set_kind}|
+  endfunction
+endclass : SUB_TYPE_SEQ
+\end{lstlisting}
+After that, the foreign UVM-\textit{e} sequence can be used like a native UVM-SV sequence shown in example~\ref{lst:SV_execute_seq}. The sequence in this example contains the proxy sequence (line~\ref{line_sv_declare_exp_seq}) defined in the previous example. After the associated sequencer is declared (line~\ref{line_sv_set_proxy_seqr}) the foreign sequence is started in the \lstinline$body()$ task (line~\ref{line_sv_do_seq}).\\
+More detailed, the execution of the proxy sequence causes the proxy sequencer to transmit it via the TLM connection. At the foreign sequencer the received struct is used to configure the corresponding UVM-\textit{e} sequence and causes its execution.
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: executing the exported UVM-\textit{e} sequence},
+label={lst:SV_execute_seq}]
+class simple_seq extends uvm_sequence;|\label{line_sv_class_start_exp_seq}|
+  SUB_TYPE_SEQ exported_seq;|\label{line_sv_declare_exp_seq}|
+
+  `uvm_object_utils(simple_seq)
+  `uvm_declare_p_sequencer(ml_sequencer_proxy)|\label{line_sv_set_proxy_seqr}|
+
+  virtual task body();
+    `uvm_do(exported_seq);|\label{line_sv_do_seq}|
+  endtask
+endclass : simple_seq
+\end{lstlisting}

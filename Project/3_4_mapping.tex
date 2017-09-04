@@ -1,0 +1,178 @@
+\subsection{Mapping Data Items Across Frameworks }\label{type_mapping}
+
+UVM-ML provides two options for data transfer between components of foreign frameworks. The first one is the configuration
+database (section~\ref{ml_config}), which gives the ability to customize the structure of the multi-language
+environment. The second option is TLM communication (section~\ref{ml_tlm}) for ongoing transfer of transactions between foreign components.\\
+Both of them require, that the types of the transferred transactions match in both frameworks. Additionally the
+serialization and de-serialization have to match to ensure data consistence for both communication partners.
+
+\subsubsection{Type Mapping}
+Type mapping in a multi-language environment means, that a user defined type in
+one framework is mapped to a corresponding type definition in a foreign framework. So the multi-language
+backplane needs to know, which type definitions shall be mapped onto each other. By default this is implicitly done by
+looking for equal type names.\\
+If type names differ, but the type descriptions should be mapped onto each other, the mapping can be done explicitly.
+For this purpose both, the UVM-SV multi-language adapter as well as UVM-\textit{e} provide a function respectively
+statement, which are shown below. Thereby \lstinline$frmw_indicator$ describes the framework, in which the type is
+declared (\lstinline$sv$ for UVM-SV, \lstinline$e$ for UVM-\textit{e}) and \lstinline$type_name$ is the name
+of the type within its framework.
+\begin{itemize}
+  \item{UVM-SV}
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+set_type_match("frmw_indicator:type_name", "frmw_indicator:type_name");
+\end{lstlisting} 
+  \item{UVM-\textit{e}}
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+uvm_ml_type_match "frmw_indicator:type_name" "frmw_indicator:type_name"
+\end{lstlisting} 
+\end{itemize}
+
+An example for both multi-language adapters mapping functionality is shown in example~\ref{lst:SV_type_mapping}
+respectively example~\ref{lst:e_type_mapping}. There the struct \lstinline$e_packet$ is mapped onto the class
+\lstinline$sv_packet$. Take into account, that the explicit type mapping only needs to occur in one component. This can either be in
+the UVM-SV component (example~\ref{lst:SV_type_mapping}, line~\ref{line_sv_mapping}) or the
+UVM-\textit{e} unit (example~\ref{lst:e_type_mapping}, line~\ref{line_e_mapping}).
+
+\lstset{language=SystemVerilog, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={SystemVerilog: mapping \lstinline$sv_packet$ onto \lstinline$e_packet$},
+label={lst:SV_type_mapping}]
+class sv_packet extends uvm_transaction;
+  int data;
+  
+  `uvm_object_utils_begin(sv_packet)
+    `uvm_field_int(data, UVM_ALL_ON)|\label{line_sv_physical}|
+  `uvm_object_utils_end
+endclass : sv_packet
+
+class testbench extends uvm_env;
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    void'(set_type_match("e:e_packet", "sv:sv_packet"));|\label{line_sv_mapping}|
+  endfunction : build_phase
+endclass : testbench
+\end{lstlisting}
+
+\lstset{language=e, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={\textit{e}: mapping \lstinline$sv_packet$ onto \lstinline$e_packet$},
+label={lst:e_type_mapping}]
+struct e_packet like any_struct {
+  %data : int;|\label{line_e_physical}|
+};
+
+uvm_ml_type_match "e:e_packet" "sv:sv_packet"|\label{line_e_mapping}|
+\end{lstlisting}
+
+\subsubsection{Serialization and De-Serialization}
+When transactions are transmitted across multiple frameworks, their representation inside of one framework cannot
+directly be transferred into a foreign framework. Even if they are composed of the same fields, the internal
+representation differ between frameworks. Therefore transactions are firstly serialized into an universal bitstream.
+This bitstream is then transmitted to the foreign framework and finally de-serialized to extract the transaction from
+it.\\
+UVM-SV as well as UVM-\textit{e} support default serialization and de-serialization. To use this
+functionalities,  the order and type of fields in the transactions must match between the declarations. Only fields,
+which are marked with a leading \lstinline$%$ are used for serialization and de-serialization in UVM-\textit{e} (see
+example~\ref{lst:e_type_mapping}, line~\ref{line_e_physical} ) and other fields inside the struct are ignored. The same
+occurs in UVM-SV for fields, if the \lstinline$`uvm_field_*$ macro is defined for them with the flag for
+packing/unpacking set within the macro (see example~\ref{lst:SV_type_mapping}, line~\ref{line_sv_physical}).\\
+If the default serialization and de-serialization cannot be applied to a transaction, manual ones can be created. This is achieved by
+implementing \lstinline$do_pack()$ as well as \lstinline$do_unpack()$ for UVM-SV transactions and
+\lstinline$pack()$ as well as \lstinline$unpack()$ for UVM-\textit{e}. Manual serialization and de-serialization is not further discussed in this report. 
+
+\subsubsection{Automatic Generation of Data Types}
+Additionally to manually re-implementing a data type, which is already available in a foreign framework, IES provides an utility called \lstinline$mltypemap$ automatically generating and mapping it.
+\paragraph{Invoking mltypemap}
+The TCL-based tool \lstinline$mltypemap$ can be invoked from \lstinline$irun$ using the following arguments:
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+irun [-uvm] [-64bit] -mltypemap_input <tcl-input-file> <pkg-containing-data-type>
+\end{lstlisting} 
+%\medskip
+The input file contains the TCL commands configuring \lstinline$mltypemap$ (see section \ref{config_mltypemap}) as well as the command invoking the mapping process (see section \ref{mapping_mltypemap}). Also the file containing the package with the data type has to be included.
+Note, that the flags for compiling the verification environment have to be set as well. Following are examples listed invoking \lstinline$mltypemap$ for UVM-\textit{e} and UVM-SV:
+%\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+#UVM-e
+irun -64bit -mltypemap_input do.tcl uvc_top.e
+
+#UVM-SV
+irun -uvm -64bit -mltypemap_input do.tcl uvc_pkg.sv
+\end{lstlisting} 
+%\medskip
+\paragraph{Configuring mltypemap} \label{config_mltypemap}
+Multiple TCL commands are avaiable to configure \lstinline$mltypemap$. Here they are listed with their most important arguments. For the full list of arguments for each command see \cite{cdnshelp}.
+\subparagraph{configure\_code command}
+The TCL command \lstinline$configure_code$ is used to apply global configurations to the generated code. Its most important arguments are:
+
+\begin{itemize}
+  \item{\lstinline$-lang <language>$}\\
+  The name of the target language for which the configuration is applied. Use \emph{e} for UVM-\textit{e} or \emph{sv} for UVM-SV.
+  \item{\lstinline$-uvm_ml_oa$}\\
+  Specifies that the code is generated for the UVM-ML solution provided by Accellera.
+\end{itemize}
+
+\subparagraph{configure\_scope command}
+This TCL command should be used, if source and target package names differ, but it does not work in IES version 15.1. Use \lstinline$configure_type$ to set the scope for each data type individually.
+\subparagraph{configure\_type command}
+Using this command, configurations can be applied to each individual data type.
+
+\begin{itemize}
+  \item{\lstinline$-type <source-type-name>$}\\
+  Specifies the name of the source data type. It also needs to include the language identifier as well as the name of the package containing the source data type.
+  \item{\lstinline$-to_name <target-type-name>$}\\
+  The name of the target data type. It has to be the simple name of the data type without language identifier and package name.
+  \item{\lstinline$-to_scope <pkg-name>$}\\
+  This parameter is used, if the packages of source and target data type have different names. Its argument is the new target package name.
+  \item{\lstinline$-skip_field <field-name>$}\\
+  The here specified field is excluded from the generated serializer/deserializer. This parameter can be repeated for multiple fields. A typical use case is combining this parameter with \lstinline$configure_field -nopack$.
+\end{itemize}
+\subparagraph{configure\_field command}
+This command is used to configure a field inside of the specified data type.
+\begin{itemize}
+  \item{\lstinline$-type <source-type-name>$}\\
+  Specifies the name of the source data type. It also needs to include the language identifier as well as the name of the package containing the source data type.
+  \item{\lstinline$-field <source-field-name>$}\\
+  The name of the source field to which the configuration is applied.
+  \item{\lstinline$-to_name <target-field-name>$}\\
+  Use this parameter to change the name of the field in the target data type.
+  \item{\lstinline$-nopack$}\\
+  With this parameter packing is disabled for the field. A typical use case is combining this with \lstinline$configure_type -skip_field$.
+\end{itemize}
+
+Example~\ref{lst:mltypemap_config} shows how to use the above TCL commands to configure \lstinline$mltypemap$.
+\lstset{language={}, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={mltypemap: configuring the automatic data type generation}, label={lst:mltypemap_config}]
+configure_code -lang sv -uvm_ml_oa
+configure_type -type sv:uvc_pkg::base_sequence -to_scope uvc_top
+configure_type -type sv:uvc_pkg::sequence_item -to_scope uvc_top -skip_field pkt_delay
+configure_field -type sv:uvc_pkg::sequence_item -field pkt_delay -nopack
+\end{lstlisting}
+
+\paragraph{Mapping Types with \lstinline$mltypemap$} \label{mapping_mltypemap}
+After configuring \lstinline$mltypemap$ the TCL command \lstinline$maptypes$ is used to invoke the mapping process. It has the following parameters:
+
+\begin{itemize}
+  \item{\lstinline$-to_lang <language>$}\\
+  The name of the target language for which the configuration is applied. Use \emph{e} for UVM-\textit{e} or \emph{sv} for UVM-SV.
+  \item{\lstinline$-from_type <source-type-name>$}\\
+  Specifies the name of the source data type. It needs to include the language identifier as well as the name of the package containing the source data type. This parameter may repeat to generate multiple data types at once. Also the parent classes of this class are mapped.
+  \item{\lstinline$-base_name <base-name>$}\\
+  Use this parameter to set the base name for the generated output files. It can contain a directory path to a folder.
+\end{itemize}
+
+Example~\ref{lst:mltypemap_generate} shows how to invoke the generation of the specified data types.
+\lstset{language={}, numbers = left, escapechar=|, breaklines=true}
+\begin{lstlisting}[frame=htrbl, caption={mltypemap: invoking the automatic data type generation}, label={lst:mltypemap_generate}]
+maptypes -to_lang e -from_type sv:uvc_pkg::long_pkt_sequence -base_name wrapper/sequence_wrapper \
+-from_type sv:uvc_pkg::random_sequence \
+-from_type sv:uvc_pkg::short_pkt_sequence \
+-from_type sv:uvc_pkg::simple_sequence \
+-from_type sv:uvc_pkg::sequence_item
+\end{lstlisting}
+\paragraph{Considerations when using mltypemap}
+When using \lstinline$mltypemap$ a few problems occur. Generally constraints are not mapped so this has to be done manually.\\
+When converting from UVM-SV to UVM-\textit{e} it is mandatory, that there are no files included outside of the package containing the data types. Otherwise the package is not recognized. Additionally the generated serializer/deserializer classes have to be edited. Thereby the extended base class contains a typo. The serializer has to be derived from \lstinline$uvm_ml::uvm_ml_class_serializer$ instead of \lstinline$ml_uvm::ml_uvm_class_serializer$.\\
+When converting from UVM-\textit{e} to UVM-SV when-subtypes of the sequence item are flattened. This means, that all when-subtypes are combined into a single sequence item. Their fields are distinguished by using the when-subtype as an prefix. In addition the generated sequences are not compatible with UVM-ML. They are derived from \lstinline$uvm_sequence$ instead of \lstinline$ml_seq$, which is used to execute UVM-\textit{e} sequences from UVM-SV ones.

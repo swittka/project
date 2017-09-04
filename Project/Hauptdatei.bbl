@@ -1,0 +1,47 @@
+\begin{thebibliography}{1}
+
+\bibitem{uvm}
+Inc. Accellera~Organization.
+\newblock Universal verification methodology (uvm) 1.1 user’s guide.
+\newblock
+  \url{http://accellera.org/images/downloads/standards/uvm/uvm_users_guide_1.1.pdf},
+  2011.
+\newblock visited on 04/12/2016.
+
+\bibitem{uvm_ml}
+Inc. Accellera~Organization.
+\newblock Uvm-ml open architecture version 1.5.1.
+\newblock
+  \url{http://forums.accellera.org/files/file/65-uvm-ml-open-architecture/},
+  2015.
+\newblock visited on 03/09/2016.
+
+\bibitem{cdnshelp}
+Cadence Design Systems.
+\newblock {\em Cadence Help}, 02.10-p001 edition, 2013.
+
+\bibitem{uvm_ml_ref}
+Cadence Design Systems.
+\newblock {\em UVM-ML OA Reference}, 1.5.1 edition, 2015.
+
+\bibitem{uvm_ml_user}
+Cadence Design Systems.
+\newblock {\em UVM-ML OA User Guide}, 1.5.1 edition, 2015.
+
+\bibitem{verilog}
+M.~Ciletti.
+\newblock {\em Advanced Digital Design with the Verilog HDL}.
+\newblock Prentice Hall, second edition, 2010.
+
+\bibitem{uvm_e}
+S.~Iman and S.~Joshi.
+\newblock {\em The e Hardware Verification Language}.
+\newblock Kluwer Academic Publishers, 2004.
+
+\bibitem{uvm_sv}
+K.~Meade and S.~Rosenberg.
+\newblock {\em A Practical Guide to Adopting the Universal Verification
+  Methodology (UVM)}.
+\newblock Cadence Design Systems, second edition, 2013.
+
+\end{thebibliography}

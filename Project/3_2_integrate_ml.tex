@@ -1,0 +1,25 @@
+\subsection{Integrate Multi-Language Functionality into Incisive Enterprise
+Simulator}
+At the current state of work multi-language support can be integrated into Cadence Incisive Enterprise Simulator via an open source package provided by Accellera Systems Initiative. It is developed jointly by AMD and Cadence Design
+Systems. This package is called \emph{UVM-ML Open Architecture} and is provided as download on the Accellera website \cite{uvm_ml}.
+For this report version 1.5.1 of the package was used. After downloading and extracting, it can be
+installed via the provided install script called \lstinline$install_ies.csh$ and the following steps using \emph{Bourne shell}:
+
+\medskip
+\lstset{language={}, numbers=none, escapechar=|}
+\begin{lstlisting}
+% export UVM_ML_HOME=<install_dir>
+% source /opt0/Administration/eda/cadence_path.INCISIV142.linux
+% csh -c "source $UVM_ML_HOME/ml/install_ies.csh [--64bit] [--no-osci]"
+\end{lstlisting} 
+\medskip 
+
+Due to some problems with the installation on \emph{Ubuntu} it is recommended to use an alternative distribution like
+\emph{CentOS}. The environment variable \lstinline$UVM_ML_HOME$ has to point to the root directory of the UVM-ML
+package, which is \lstinline$UVM_ML-1.5.1$ for version 1.5.1. Within the \emph{Computer Architecture Group} the standard setup script can be used
+to set the path environment variable to the \emph{irun} installation. While sourcing
+\lstinline$install_ies.csh$ additional options can be used to control it. To install the environment on a 64 bit machine
+instead of a 32 bit one use \lstinline$--64bit$. If only the adapters for UVM-SV, UVM-SystemC and
+UVM-\textit{e} are required, UVM-ML can be build without the ASI-SystemC adapter via \lstinline$--no_osci$.\\
+After this installation UVM-ML enables the creation of multi-language environments as well as running tests, which is
+discussed in the following sections.
